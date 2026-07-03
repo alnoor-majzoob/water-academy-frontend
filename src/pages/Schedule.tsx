@@ -40,6 +40,7 @@ export function Schedule() {
   const [filterCity, setFilterCity] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ courseId: '', trainerId: '', venueId: '', startDate: '', endDate: '', notes: '' });
   const [pendingPayload, setPendingPayload] = useState<typeof form | null>(null);
 
@@ -65,6 +66,7 @@ export function Schedule() {
 
   const loadData = async () => {
     if (!activeWorkspace) return;
+    setLoading(true);
     try {
       const [entryRows, courseRows, trainerRows, venueRows] = await Promise.all([
         api.scheduleEntries.list(activeWorkspace),
@@ -78,6 +80,8 @@ export function Schedule() {
       setEntries(entryRows.map((entry) => mapEntry(entry, venueRows)));
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Failed to load schedule');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -200,6 +204,12 @@ export function Schedule() {
         <div className={`flex items-center gap-1.5 ms-auto text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}><Filter size={14} />{filtered.length} {t('نتيجة', 'results', lang)}</div>
       </div>
 
+      {loading ? (
+        <div className="flex items-center justify-center min-h-[300px]">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (
+      <>
       {view === 'calendar' && (
         <div className={`${card} p-5`}>
           <h3 className={`font-semibold mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>{months[currentMonthIndex]}</h3>
@@ -274,6 +284,7 @@ export function Schedule() {
           })}
         </div>
       )}
+      </>)}
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">

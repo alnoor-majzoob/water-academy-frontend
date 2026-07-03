@@ -23,6 +23,7 @@ export function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(0);
   const [viewMode, setViewMode] = useState<'calendar' | 'table'>('calendar');
   const [calendarDays, setCalendarDays] = useState<CalendarDayDto[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const year = currentWorkspace?.year || new Date().getFullYear();
   const months = lang === 'ar' ? ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'] : ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -30,11 +31,14 @@ export function CalendarPage() {
 
   const loadCalendar = async () => {
     if (!activeWorkspace) return;
+    setLoading(true);
     try {
       const data = await api.calendarDays.list(activeWorkspace);
       setCalendarDays(data);
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Failed to load calendar');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -95,6 +99,11 @@ export function CalendarPage() {
         </div>
       </div>
 
+      {loading ? (
+        <div className="flex items-center justify-center min-h-[300px]">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (<>
       <div className="grid grid-cols-3 gap-4">
         {[
           { label: t('أيام عمل', 'Working Days', lang), count: stats.working, dot: 'bg-green-500' },
@@ -156,6 +165,7 @@ export function CalendarPage() {
           <span className={`text-xs ms-auto ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t('اضغط على اليوم لتغيير نوعه', 'Click a day to change its type', lang)}</span>
         </div>
       </div>
+      </>)}
     </div>
   );
 }

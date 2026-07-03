@@ -15,11 +15,13 @@ export function Dashboard({ setActivePage }: Props) {
   const [trainers, setTrainers] = useState<TrainerDto[]>([]);
   const [venues, setVenues] = useState<VenueDto[]>([]);
   const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntryDto[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const card = `rounded-2xl p-5 border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} shadow-sm`;
 
   useEffect(() => {
     if (!activeWorkspace) return;
+    setLoading(true);
     Promise.all([
       api.courses.list(activeWorkspace),
       api.trainers.list(activeWorkspace),
@@ -30,7 +32,8 @@ export function Dashboard({ setActivePage }: Props) {
       setTrainers(trainerRows);
       setVenues(venueRows);
       setScheduleEntries(scheduleRows);
-    }).catch((error: unknown) => addToast('error', error instanceof Error ? error.message : 'Dashboard load failed'));
+    }).catch((error: unknown) => addToast('error', error instanceof Error ? error.message : 'Dashboard load failed'))
+    .finally(() => setLoading(false));
   }, [activeWorkspace]);
 
   const statusLabels = scheduleEntries.map((entry) => scheduleStatusLabel(entry.status, entry.conflictNotes));
@@ -100,12 +103,18 @@ export function Dashboard({ setActivePage }: Props) {
         <div className={`px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-2 ${isDark ? 'bg-green-900/40 text-green-400' : 'bg-green-50 text-green-700'}`}><TrendingUp size={14} />{courses.length ? `${Math.round((scheduledCount / Math.max(courses.length, 1)) * 100)}% ${t('مكتمل', 'Complete', lang)}` : t('لا توجد بيانات', 'No data', lang)}</div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-        {kpis.map((kpi, i) => {
-          const Icon = kpi.icon;
-          return <div key={i} className={`${card} flex flex-col gap-3`}><div className="flex items-start justify-between"><div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorMap[kpi.color]}`}><Icon size={18} /></div></div><div><div className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{kpi.value}</div><div className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t(kpi.ar, kpi.en, lang)}</div></div></div>;
-        })}
-      </div>
+      {loading ? (
+        <div className="flex items-center justify-center min-h-[300px]">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+          {kpis.map((kpi, i) => {
+            const Icon = kpi.icon;
+            return <div key={i} className={`${card} flex flex-col gap-3`}><div className="flex items-start justify-between"><div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorMap[kpi.color]}`}><Icon size={18} /></div></div><div><div className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{kpi.value}</div><div className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t(kpi.ar, kpi.en, lang)}</div></div></div>;
+          })}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className={`${card} lg:col-span-2`}>

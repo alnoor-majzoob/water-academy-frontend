@@ -7,7 +7,7 @@ import { api, uiToWorkspaceStatus, workspaceStatusLabel, type WorkspaceDto } fro
 type UiWorkspaceStatus = 'Draft' | 'Imported' | 'Optimized' | 'Disabled';
 
 export function Workspaces() {
-  const { lang, theme, addToast, workspaces, reloadWorkspaces } = useApp();
+  const { lang, theme, addToast, workspaces, reloadWorkspaces, loadingWorkspaces } = useApp();
   const isDark = theme === 'dark';
   const [view, setView] = useState<'card' | 'table'>('card');
   const [showCreate, setShowCreate] = useState(false);
@@ -122,6 +122,11 @@ export function Workspaces() {
         </div>
       </div>
 
+      {loadingWorkspaces ? (
+        <div className="flex items-center justify-center min-h-[300px]">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (<>
       {view === 'card' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {workspaces.map((ws) => (
@@ -205,6 +210,7 @@ export function Workspaces() {
           </table>
         </div>
       )}
+      </>)}
 
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">

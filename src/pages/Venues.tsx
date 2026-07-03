@@ -43,6 +43,7 @@ export function Venues() {
   const [form, setForm] = useState<UiVenue | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const card = `rounded-2xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} shadow-sm`;
   const inputCls = `w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-800'}`;
@@ -58,11 +59,14 @@ export function Venues() {
 
   const loadVenues = async () => {
     if (!activeWorkspace) return;
+    setLoading(true);
     try {
       const data = await api.venues.list(activeWorkspace);
       setVenues(data.map(mapVenue));
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Failed to load venues');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -167,6 +171,11 @@ export function Venues() {
         </select>
       </div>
 
+      {loading ? (
+        <div className="flex items-center justify-center min-h-[300px]">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filtered.map((venue) => (
           <div key={venue.id} className={`${card} p-5 hover:shadow-md transition-shadow`}>
@@ -192,6 +201,7 @@ export function Venues() {
           </div>
         ))}
       </div>
+      )}
 
       {showDrawer && form && (
         <div className="fixed inset-0 z-50 flex">

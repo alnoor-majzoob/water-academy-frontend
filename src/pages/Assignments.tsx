@@ -25,6 +25,7 @@ export function Assignments() {
   const [filterCourse, setFilterCourse] = useState('');
   const [filterTrainer, setFilterTrainer] = useState('');
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [courses, setCourses] = useState<CourseDto[]>([]);
   const [trainers, setTrainers] = useState<TrainerDto[]>([]);
 
@@ -49,6 +50,7 @@ export function Assignments() {
 
   const loadData = async () => {
     if (!activeWorkspace) return;
+    setLoading(true);
     try {
       const [assignmentRows, courseRows, trainerRows] = await Promise.all([
         api.assignments.list(activeWorkspace),
@@ -60,6 +62,8 @@ export function Assignments() {
       setAssignments(buildAssignments(assignmentRows, courseRows, trainerRows));
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Failed to load assignments');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -137,6 +141,11 @@ export function Assignments() {
         </select>
       </div>
 
+      {loading ? (
+        <div className="flex items-center justify-center min-h-[300px]">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (<>
       {view === 'table' && (
         <div className={`${card} overflow-hidden`}>
           <table className="w-full">
@@ -207,6 +216,7 @@ export function Assignments() {
           </table>
         </div>
       )}
+      </>)}
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">

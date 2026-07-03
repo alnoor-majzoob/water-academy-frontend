@@ -27,12 +27,15 @@ export function Unscheduled() {
   const card = `rounded-2xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} shadow-sm`;
   const [courses, setCourses] = useState<CourseDto[]>([]);
   const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntryDto[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!activeWorkspace) return;
+    setLoading(true);
     Promise.all([api.courses.list(activeWorkspace), api.scheduleEntries.list(activeWorkspace)])
       .then(([courseRows, entryRows]) => { setCourses(courseRows); setScheduleEntries(entryRows); })
-      .catch((error: unknown) => addToast('error', error instanceof Error ? error.message : 'Failed to load unscheduled courses'));
+      .catch((error: unknown) => addToast('error', error instanceof Error ? error.message : 'Failed to load unscheduled courses'))
+      .finally(() => setLoading(false));
   }, [activeWorkspace]);
 
   const unscheduledCourses = useMemo(() => {
@@ -68,6 +71,11 @@ export function Unscheduled() {
         <div className={`flex items-center gap-2 px-4 py-2 rounded-xl ${isDark ? 'bg-orange-900/30 text-orange-300' : 'bg-orange-50 text-orange-700'}`}><AlertTriangle size={16} /><span className="text-sm font-medium">{t('يتطلب مراجعة', 'Needs Review', lang)}</span></div>
       </div>
 
+      {loading ? (
+        <div className="flex items-center justify-center min-h-[300px]">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (<>
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         {summaryKeys.map((key) => {
           const cfg = reasonConfig[key];
@@ -103,13 +111,14 @@ export function Unscheduled() {
         })}
       </div>
 
-      {unscheduledCourses.length === 0 && (
+      {unscheduledCourses.length === 0 && !loading && (
         <div className={`${card} p-16 flex flex-col items-center gap-4 text-center`}>
           <div className="w-16 h-16 rounded-2xl bg-green-100 flex items-center justify-center"><ListX size={28} className="text-green-500" /></div>
           <p className={`font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>{t('رائع! لا توجد دورات غير مجدولة', 'Great! No unscheduled courses', lang)}</p>
           <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t('جميع الدورات الموجودة تم جدولتها أو لا توجد بيانات بعد', 'All available courses are scheduled or no data has been imported yet', lang)}</p>
         </div>
       )}
+      </>)}
     </div>
   );
 }

@@ -234,6 +234,11 @@ export function Courses() {
         )}
       </div>
 
+      {loading ? (
+        <div className="flex items-center justify-center min-h-[300px]">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (
       <div className={`${card} overflow-hidden`}>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -299,6 +304,7 @@ export function Courses() {
           </div>
         </div>
       </div>
+      )}
 
       {showDrawer && (
         <div className="fixed inset-0 z-50 flex">

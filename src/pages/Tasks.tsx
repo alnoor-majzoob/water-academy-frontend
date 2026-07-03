@@ -31,16 +31,20 @@ export function Tasks() {
   const isDark = theme === 'dark';
   const [tasks, setTasks] = useState<UiTask[]>([]);
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const card = `rounded-2xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} shadow-sm`;
 
   const loadTasks = async () => {
     if (!activeWorkspace) return;
+    setLoading(true);
     try {
       const data = await api.tasks.list(activeWorkspace);
       setTasks(data.map(mapTask));
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Failed to load tasks');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -92,6 +96,11 @@ export function Tasks() {
         </div>
       </div>
 
+      {loading ? (
+        <div className="flex items-center justify-center min-h-[300px]">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (<>
       <div className="grid grid-cols-4 gap-4">
         {(['Pending', 'Running', 'Completed', 'Failed'] as UiTask['status'][]).map((status) => (
           <div key={status} className={`${card} p-4`}>
@@ -126,6 +135,7 @@ export function Tasks() {
           </div>
         ))}
       </div>
+      </>)}
     </div>
   );
 }

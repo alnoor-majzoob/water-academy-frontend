@@ -30,14 +30,17 @@ export function Conflicts() {
   const [selectedConflict, setSelectedConflict] = useState<Conflict | null>(null);
   const [resolvedIds, setResolvedIds] = useState<string[]>([]);
   const [entries, setEntries] = useState<ScheduleEntryDto[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const card = `rounded-2xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} shadow-sm`;
 
   useEffect(() => {
     if (!activeWorkspace) return;
+    setLoading(true);
     api.scheduleEntries.list(activeWorkspace)
       .then(setEntries)
-      .catch((error: unknown) => addToast('error', error instanceof Error ? error.message : 'Failed to load conflicts'));
+      .catch((error: unknown) => addToast('error', error instanceof Error ? error.message : 'Failed to load conflicts'))
+      .finally(() => setLoading(false));
   }, [activeWorkspace]);
 
   const conflicts = useMemo<Conflict[]>(() => entries.filter((entry) => entry.conflictNotes).map((entry) => ({
@@ -91,6 +94,11 @@ export function Conflicts() {
         </div>
       </div>
 
+      {loading ? (
+        <div className="flex items-center justify-center min-h-[300px]">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (<>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: t('حرج', 'Critical', lang), count: conflicts.filter((c) => c.severity === 'Critical' && !c.resolved).length },
@@ -121,6 +129,7 @@ export function Conflicts() {
           )}
         </div>
       </div>
+      </>)}
     </div>
   );
 }
