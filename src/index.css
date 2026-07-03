@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+:root {
+  --font-ar: 'Cairo', sans-serif;
+  --font-en: 'Inter', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-ar);
+  margin: 0;
+  padding: 0;
+}
+
+body.lang-en {
+  font-family: var(--font-en);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+/* Sidebar transitions */
+.sidebar-transition {
+  transition: all 0.3s ease;
+}
+
+/* Toast animations */
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.toast-enter {
+  animation: slideInRight 0.3s ease forwards;
+}
+.toast-exit {
+  animation: fadeOut 0.3s ease forwards;
+}
+
+/* Calendar day styles */
+.calendar-day {
+  transition: all 0.15s ease;
+}
+.calendar-day:hover {
+  transform: scale(1.05);
+}
+
+/* Table row hover */
+.table-row-hover:hover {
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+/* Drag handle */
+.drag-handle {
+  cursor: grab;
+}
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Status chip glow */
+.chip-glow-conflict {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+/* Progress bar animation */
+@keyframes progress {
+  from { width: 0%; }
+  to { width: var(--progress-width); }
+}
+.animated-progress {
+  animation: progress 1s ease-out forwards;
+}
+
+/* Number counter animation */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.count-up {
+  animation: countUp 0.5s ease-out forwards;
+}
