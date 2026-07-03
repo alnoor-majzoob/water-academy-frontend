@@ -42,6 +42,7 @@ export function Venues() {
   const [selected, setSelected] = useState<UiVenue | null>(null);
   const [form, setForm] = useState<UiVenue | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
   const card = `rounded-2xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} shadow-sm`;
   const inputCls = `w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-800'}`;
@@ -97,6 +98,8 @@ export function Venues() {
     }
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
+    if (saving) return;
+    setSaving(true);
     const payload = {
       name: form.name,
       city: form.city || null,
@@ -119,6 +122,8 @@ export function Venues() {
       await loadVenues();
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Venue save failed');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -211,7 +216,7 @@ export function Venues() {
               <div><label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('ملاحظات التجهيز', 'Equipment Notes', lang)}</label><textarea value={form.equipmentNotes || ''} onChange={(e) => setForm((p) => p ? ({ ...p, equipmentNotes: e.target.value }) : p)} rows={3} className={inputCls + ' resize-none'} /></div>
             </div>
             <div className={`px-6 py-4 border-t flex gap-3 ${isDark ? 'border-slate-700' : 'border-slate-100'}`}>
-              <button onClick={() => void handleSave()} className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium">{t('حفظ', 'Save', lang)}</button>
+              <button onClick={() => void handleSave()} disabled={saving} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${saving ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white`}>{saving ? t('جاري الحفظ...', 'Saving...', lang) : t('حفظ', 'Save', lang)}</button>
               <button onClick={() => setShowDrawer(false)} className={`flex-1 py-2.5 rounded-xl text-sm border ${isDark ? 'border-slate-600 text-slate-300' : 'border-slate-200 text-slate-600'}`}>{t('إلغاء', 'Cancel', lang)}</button>
             </div>
           </div>

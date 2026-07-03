@@ -39,6 +39,7 @@ export function Schedule() {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterCity, setFilterCity] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ courseId: '', trainerId: '', venueId: '', startDate: '', endDate: '', notes: '' });
   const [pendingPayload, setPendingPayload] = useState<typeof form | null>(null);
 
@@ -94,6 +95,8 @@ export function Schedule() {
 
   const persistEntry = async (payload: typeof form) => {
     if (!activeWorkspace) return;
+    if (saving) return;
+    setSaving(true);
     try {
       const created = await api.scheduleEntries.create(activeWorkspace, {
         courseId: payload.courseId,
@@ -111,6 +114,8 @@ export function Schedule() {
       await loadData();
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Schedule save failed');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -119,6 +124,8 @@ export function Schedule() {
       addToast('error', t('يرجى إكمال الحقول المطلوبة', 'Please complete the required fields', lang));
       return;
     }
+    if (saving) return;
+    setSaving(true);
     try {
       const [trainerConflicts, venueConflicts] = await Promise.all([
         api.scheduleEntries.trainerConflicts(activeWorkspace, form.trainerId, form.startDate, form.endDate),
@@ -134,6 +141,8 @@ export function Schedule() {
       await persistEntry(form);
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Conflict check failed');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -277,7 +286,7 @@ export function Schedule() {
               <div className="grid grid-cols-2 gap-3"><div><label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('تاريخ البداية', 'Start Date', lang)}</label><input type="date" value={form.startDate} onChange={(e) => setForm((p) => ({ ...p, startDate: e.target.value }))} className={inputCls} /></div><div><label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('تاريخ النهاية', 'End Date', lang)}</label><input type="date" value={form.endDate} onChange={(e) => setForm((p) => ({ ...p, endDate: e.target.value }))} className={inputCls} /></div></div>
               <div><label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('ملاحظات', 'Notes', lang)}</label><textarea value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} rows={2} className={inputCls + ' resize-none'} /></div>
             </div>
-            <div className="flex gap-3 mt-6"><button onClick={() => void handleSaveEntry()} className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium">{t('حفظ', 'Save', lang)}</button><button onClick={() => setShowModal(false)} className={`flex-1 py-2.5 rounded-xl text-sm border ${isDark ? 'border-slate-600 text-slate-300' : 'border-slate-200 text-slate-600'}`}>{t('إلغاء', 'Cancel', lang)}</button></div>
+            <div className="flex gap-3 mt-6"><button onClick={() => void handleSaveEntry()} disabled={saving} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${saving ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white`}>{saving ? t('جاري الحفظ...', 'Saving...', lang) : t('حفظ', 'Save', lang)}</button><button onClick={() => setShowModal(false)} className={`flex-1 py-2.5 rounded-xl text-sm border ${isDark ? 'border-slate-600 text-slate-300' : 'border-slate-200 text-slate-600'}`}>{t('إلغاء', 'Cancel', lang)}</button></div>
           </div>
         </div>
       )}
@@ -288,7 +297,7 @@ export function Schedule() {
             <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4"><AlertTriangle size={24} className="text-red-600" /></div>
             <h3 className={`text-center font-bold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>{t('تحذير: تعارض!', 'Warning: Conflict!', lang)}</h3>
             <p className={`text-center text-sm mb-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t('هناك تعارض مع مدرب أو قاعة في نفس الفترة. هل تريد الحفظ مع التعارض؟', 'There is a trainer or venue conflict in the same period. Save with conflict anyway?', lang)}</p>
-            <div className="flex gap-3"><button onClick={() => pendingPayload && void persistEntry(pendingPayload)} className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-medium">{t('حفظ مع التعارض', 'Save with Conflict', lang)}</button><button onClick={() => setShowConflictWarning(false)} className={`flex-1 py-2.5 rounded-xl text-sm border ${isDark ? 'border-slate-600 text-slate-300' : 'border-slate-200 text-slate-600'}`}>{t('مراجعة', 'Review', lang)}</button></div>
+            <div className="flex gap-3"><button onClick={() => pendingPayload && void persistEntry(pendingPayload)} disabled={saving} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${saving ? 'bg-red-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'} text-white`}>{saving ? t('جاري الحفظ...', 'Saving...', lang) : t('حفظ مع التعارض', 'Save with Conflict', lang)}</button><button onClick={() => setShowConflictWarning(false)} className={`flex-1 py-2.5 rounded-xl text-sm border ${isDark ? 'border-slate-600 text-slate-300' : 'border-slate-200 text-slate-600'}`}>{t('مراجعة', 'Review', lang)}</button></div>
           </div>
         </div>
       )}

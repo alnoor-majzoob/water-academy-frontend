@@ -58,6 +58,7 @@ export function Courses() {
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
   const perPage = 5;
 
   const inputCls = `w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500
@@ -136,6 +137,8 @@ export function Courses() {
   const handleSave = async () => {
     if (!activeWorkspace) return;
     if (!validateForm()) return;
+    if (saving) return;
+    setSaving(true);
     try {
       const payload = {
         name: form.name,
@@ -164,6 +167,8 @@ export function Courses() {
       await loadCourses();
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Course save failed');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -321,7 +326,7 @@ export function Courses() {
               </div>
             </div>
             <div className={`px-6 py-4 border-t flex gap-3 ${isDark ? 'border-slate-700' : 'border-slate-100'}`}>
-              <button onClick={() => void handleSave()} className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium text-sm transition-colors">{t('حفظ', 'Save', lang)}</button>
+              <button onClick={() => void handleSave()} disabled={saving} className={`flex-1 py-2.5 rounded-xl font-medium text-sm transition-colors ${saving ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white`}>{saving ? t('جاري الحفظ...', 'Saving...', lang) : t('حفظ', 'Save', lang)}</button>
               <button onClick={() => setShowDrawer(false)} className={`flex-1 py-2.5 rounded-xl font-medium text-sm border ${isDark ? 'border-slate-600 text-slate-300' : 'border-slate-200 text-slate-600'}`}>{t('إلغاء', 'Cancel', lang)}</button>
             </div>
           </div>

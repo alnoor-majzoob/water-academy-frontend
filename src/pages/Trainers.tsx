@@ -44,6 +44,7 @@ export function Trainers() {
   const [selected, setSelected] = useState<UiTrainer | null>(null);
   const [form, setForm] = useState<UiTrainer | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
   const isDarkCard = `rounded-2xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} shadow-sm`;
   const inputCls = `w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400' : 'bg-white border-slate-200 text-slate-800'}`;
@@ -95,6 +96,8 @@ export function Trainers() {
     if (form.costPerDay < 1) errs.costPerDay = t('التكلفة يجب أن تكون 1 على الأقل', 'Cost must be at least 1', lang);
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
+    if (saving) return;
+    setSaving(true);
     const payload = {
       name: form.name,
       city: form.city || null,
@@ -118,6 +121,8 @@ export function Trainers() {
       await loadTrainers();
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Trainer save failed');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -269,7 +274,7 @@ export function Trainers() {
               </div>
             </div>
             <div className={`px-6 py-4 border-t flex gap-3 ${isDark ? 'border-slate-700' : 'border-slate-100'}`}>
-              <button onClick={() => void handleSave()} className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium text-sm">{t('حفظ', 'Save', lang)}</button>
+              <button onClick={() => void handleSave()} disabled={saving} className={`flex-1 py-2.5 rounded-xl font-medium text-sm transition-colors ${saving ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white`}>{saving ? t('جاري الحفظ...', 'Saving...', lang) : t('حفظ', 'Save', lang)}</button>
               <button onClick={() => setShowDrawer(false)} className={`flex-1 py-2.5 rounded-xl text-sm border ${isDark ? 'border-slate-600 text-slate-300' : 'border-slate-200 text-slate-600'}`}>{t('إلغاء', 'Cancel', lang)}</button>
             </div>
           </div>

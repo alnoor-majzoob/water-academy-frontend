@@ -24,6 +24,7 @@ export function Assignments() {
   const [view, setView] = useState<'table' | 'matrix'>('table');
   const [filterCourse, setFilterCourse] = useState('');
   const [filterTrainer, setFilterTrainer] = useState('');
+  const [saving, setSaving] = useState(false);
   const [courses, setCourses] = useState<CourseDto[]>([]);
   const [trainers, setTrainers] = useState<TrainerDto[]>([]);
 
@@ -73,11 +74,13 @@ export function Assignments() {
 
   const handleSave = async () => {
     if (!activeWorkspace) return;
+    if (saving) return;
     const duplicate = assignments.some((a) => a.courseId === form.courseId && a.trainerId === form.trainerId);
     if (duplicate) {
       addToast('error', t('هذا التعيين موجود مسبقاً!', 'This assignment already exists!', lang));
       return;
     }
+    setSaving(true);
     try {
       await api.assignments.create(activeWorkspace, { courseId: form.courseId, trainerId: form.trainerId });
       setShowModal(false);
@@ -86,6 +89,8 @@ export function Assignments() {
       await loadData();
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Assignment save failed');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -237,7 +242,7 @@ export function Assignments() {
               )}
             </div>
             <div className="flex gap-3 mt-6">
-              <button onClick={() => void handleSave()} className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium">{t('حفظ', 'Save', lang)}</button>
+              <button onClick={() => void handleSave()} disabled={saving} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${saving ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white`}>{saving ? t('جاري الحفظ...', 'Saving...', lang) : t('حفظ', 'Save', lang)}</button>
               <button onClick={() => setShowModal(false)} className={`flex-1 py-2.5 rounded-xl text-sm border ${isDark ? 'border-slate-600 text-slate-300' : 'border-slate-200 text-slate-600'}`}>{t('إلغاء', 'Cancel', lang)}</button>
             </div>
           </div>
