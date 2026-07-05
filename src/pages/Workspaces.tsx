@@ -11,7 +11,7 @@ export function Workspaces() {
   const isDark = theme === 'dark';
   const [view, setView] = useState<'card' | 'table'>('card');
   const [showCreate, setShowCreate] = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
   const [editItem, setEditItem] = useState<WorkspaceDto | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: '', year: 2026, color: '#3B82F6', status: 'Draft' as UiWorkspaceStatus, description: '' });
@@ -74,7 +74,7 @@ export function Workspaces() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: number) => {
     try {
       await api.workspaces.delete(id);
       setDeleteId(null);

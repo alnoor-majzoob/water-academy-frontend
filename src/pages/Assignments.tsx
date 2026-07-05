@@ -4,11 +4,11 @@ import { Plus, X, AlertCircle } from 'lucide-react';
 import { api, type AssignmentDto, type CourseDto, type TrainerDto } from '../lib/api';
 
 type UiAssignment = {
-  id: string;
-  courseId: string;
+  id: number;
+  courseId: number;
   courseName: string;
   courseNameEn: string;
-  trainerId: string;
+  trainerId: number;
   trainerName: string;
   trainerNameEn: string;
   assignedDate: string;
@@ -22,8 +22,8 @@ export function Assignments() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ courseId: '', trainerId: '', specialty: '' });
   const [view, setView] = useState<'table' | 'matrix'>('table');
-  const [filterCourse, setFilterCourse] = useState('');
-  const [filterTrainer, setFilterTrainer] = useState('');
+  const [filterCourse, setFilterCourse] = useState(0);
+  const [filterTrainer, setFilterTrainer] = useState(0);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [courses, setCourses] = useState<CourseDto[]>([]);
@@ -38,11 +38,11 @@ export function Assignments() {
     return {
       id: item.id,
       courseId: item.courseId,
-      courseName: course?.name || item.courseId,
-      courseNameEn: course?.name || item.courseId,
+      courseName: course?.name || String(item.courseId),
+      courseNameEn: course?.name || String(item.courseId),
       trainerId: item.trainerId,
-      trainerName: trainer?.name || item.trainerId,
-      trainerNameEn: trainer?.name || item.trainerId,
+      trainerName: trainer?.name || String(item.trainerId),
+      trainerNameEn: trainer?.name || String(item.trainerId),
       assignedDate: item.createdAt.slice(0, 10),
       specialty: trainer?.specialties?.split(',')[0]?.trim() || '',
     };
@@ -76,19 +76,22 @@ export function Assignments() {
     (!filterTrainer || a.trainerId === filterTrainer)
   ), [assignments, filterCourse, filterTrainer]);
 
+  const isAssigned = (courseId: number, trainerId: number) => assignments.some((a) => a.courseId === courseId && a.trainerId === trainerId);
+
   const handleSave = async () => {
     if (!activeWorkspace) return;
     if (saving) return;
-    const duplicate = assignments.some((a) => a.courseId === form.courseId && a.trainerId === form.trainerId);
+    const duplicate = assignments.some((a) => a.courseId === Number(form.courseId) && a.trainerId === Number(form.trainerId));
     if (duplicate) {
       addToast('error', t('هذا التعيين موجود مسبقاً!', 'This assignment already exists!', lang));
       return;
     }
     setSaving(true);
     try {
-      await api.assignments.create(activeWorkspace, { courseId: form.courseId, trainerId: form.trainerId });
+      await api.assignments.create(activeWorkspace, { courseId: Number(form.courseId), trainerId: Number(form.trainerId) });
       setShowModal(false);
       setForm({ courseId: '', trainerId: '', specialty: '' });
+
       addToast('success', t('تم إضافة التعيين', 'Assignment added', lang));
       await loadData();
     } catch (error) {
@@ -98,7 +101,7 @@ export function Assignments() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: number) => {
     if (!activeWorkspace) return;
     try {
       await api.assignments.delete(activeWorkspace, id);
@@ -111,7 +114,8 @@ export function Assignments() {
 
   const matrixCourses = courses.slice(0, 10);
   const matrixTrainers = trainers;
-  const isAssigned = (courseId: string, trainerId: string) => assignments.some((a) => a.courseId === courseId && a.trainerId === trainerId);
+
+
 
   return (
     <div className="p-6 space-y-5 overflow-y-auto h-full">
@@ -131,11 +135,11 @@ export function Assignments() {
       </div>
 
       <div className={`${card} p-4 flex flex-wrap gap-3`}>
-        <select value={filterCourse} onChange={(e) => setFilterCourse(e.target.value)} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>
+        <select value={filterCourse || ''} onChange={(e) => setFilterCourse(e.target.value ? Number(e.target.value) : 0)} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>
           <option value="">{t('كل الدورات', 'All Courses', lang)}</option>
           {courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <select value={filterTrainer} onChange={(e) => setFilterTrainer(e.target.value)} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>
+        <select value={filterTrainer || ''} onChange={(e) => setFilterTrainer(e.target.value ? Number(e.target.value) : 0)} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>
           <option value="">{t('كل المدربين', 'All Trainers', lang)}</option>
           {trainers.map((tr) => <option key={tr.id} value={tr.id}>{tr.name}</option>)}
         </select>
@@ -199,7 +203,7 @@ export function Assignments() {
                               const existing = assignments.find((a) => a.courseId === course.id && a.trainerId === trainer.id);
                               if (existing) void handleDelete(existing.id);
                             } else {
-                              setForm({ courseId: course.id, trainerId: trainer.id, specialty: trainer.specialties?.split(',')[0]?.trim() || '' });
+                              setForm({ courseId: String(course.id), trainerId: String(trainer.id), specialty: trainer.specialties?.split(',')[0]?.trim() || '' });
                               void api.assignments.create(activeWorkspace, { courseId: course.id, trainerId: trainer.id }).then(() => loadData()).catch((error: unknown) => addToast('error', error instanceof Error ? error.message : 'Assignment failed'));
                             }
                           }}
@@ -244,7 +248,7 @@ export function Assignments() {
                 <label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('التخصص', 'Specialty', lang)}</label>
                 <input value={form.specialty} onChange={(e) => setForm((p) => ({ ...p, specialty: e.target.value }))} className={inputCls} placeholder={t('أدخل التخصص', 'Enter specialty', lang)} />
               </div>
-              {assignments.some((a) => a.courseId === form.courseId && a.trainerId === form.trainerId) && (
+              {assignments.some((a) => a.courseId === Number(form.courseId) && a.trainerId === Number(form.trainerId)) && (
                 <div className={`flex items-center gap-2 p-3 rounded-xl ${isDark ? 'bg-amber-900/30 text-amber-300' : 'bg-amber-50 text-amber-700'}`}>
                   <AlertCircle size={14} />
                   <span className="text-xs">{t('هذا التعيين موجود مسبقاً', 'This assignment already exists', lang)}</span>

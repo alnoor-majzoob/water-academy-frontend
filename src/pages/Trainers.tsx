@@ -4,7 +4,7 @@ import { Plus, Search, Edit2, Trash2, X, MapPin } from 'lucide-react';
 import { api, type TrainerDto } from '../lib/api';
 
 type UiTrainer = {
-  id: string;
+  id: number;
   externalId: string;
   name: string;
   nameEn: string;
@@ -85,7 +85,7 @@ export function Trainers() {
   const openCreate = () => {
     setSelected(null);
     setErrors({});
-    setForm({ id: '', externalId: '', name: '', nameEn: '', specialties: [], city: '', trainerType: 'Internal', unavailableDates: [], maxDaysPerMonth: 20, maxConsecutiveDays: 5, costPerDay: 1500, notes: '' });
+    setForm({ id: 0, externalId: '', name: '', nameEn: '', specialties: [], city: '', trainerType: 'Internal', unavailableDates: [], maxDaysPerMonth: 20, maxConsecutiveDays: 5, costPerDay: 1500, notes: '' });
     setShowDrawer(true);
   };
 
@@ -130,7 +130,7 @@ export function Trainers() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: number) => {
     if (!activeWorkspace) return;
     try {
       await api.trainers.delete(activeWorkspace, id);

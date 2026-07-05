@@ -8,13 +8,13 @@ type ViewType = 'calendar' | 'table' | 'kanban';
 type UiStatus = 'Scheduled' | 'Confirmed' | 'Completed' | 'Conflict';
 
 interface UiScheduleEntry {
-  id: string;
-  courseId: string;
+  id: number;
+  courseId: number;
   courseName: string;
   courseNameEn: string;
-  trainerId: string;
+  trainerId: number;
   trainerName: string;
-  venueId: string;
+  venueId: number;
   venueName: string;
   city: string;
   startDate: string;
@@ -54,7 +54,7 @@ export function Schedule() {
     courseNameEn: entry.courseName,
     trainerId: entry.trainerId,
     trainerName: entry.trainerName,
-    venueId: entry.venueId || '',
+    venueId: entry.venueId ?? 0,
     venueName: entry.venueName || '',
     city: venueRows.find((venue) => venue.id === entry.venueId)?.city || '',
     startDate: entry.startDate,
@@ -103,9 +103,9 @@ export function Schedule() {
     setSaving(true);
     try {
       const created = await api.scheduleEntries.create(activeWorkspace, {
-        courseId: payload.courseId,
-        trainerId: payload.trainerId,
-        venueId: payload.venueId || null,
+        courseId: Number(payload.courseId),
+        trainerId: Number(payload.trainerId),
+        venueId: payload.venueId ? Number(payload.venueId) : null,
         startDate: payload.startDate,
         endDate: payload.endDate,
         conflictNotes: payload.notes || null,
@@ -132,11 +132,11 @@ export function Schedule() {
     setSaving(true);
     try {
       const [trainerConflicts, venueConflicts] = await Promise.all([
-        api.scheduleEntries.trainerConflicts(activeWorkspace, form.trainerId, form.startDate, form.endDate),
-        form.venueId ? api.scheduleEntries.venueConflicts(activeWorkspace, form.venueId, form.startDate, form.endDate) : Promise.resolve([]),
+        api.scheduleEntries.trainerConflicts(activeWorkspace, Number(form.trainerId), form.startDate, form.endDate),
+        form.venueId ? api.scheduleEntries.venueConflicts(activeWorkspace, Number(form.venueId), form.startDate, form.endDate) : Promise.resolve([]),
       ]);
-      const actualTrainerConflicts = trainerConflicts.filter((item) => item.id !== form.courseId);
-      const actualVenueConflicts = venueConflicts.filter((item) => item.id !== form.courseId);
+      const actualTrainerConflicts = trainerConflicts.filter((item) => item.id !== Number(form.courseId));
+      const actualVenueConflicts = venueConflicts.filter((item) => item.id !== Number(form.courseId));
       if (actualTrainerConflicts.length || actualVenueConflicts.length) {
         setPendingPayload(form);
         setShowConflictWarning(true);
@@ -150,7 +150,7 @@ export function Schedule() {
     }
   };
 
-  const changeStatus = async (id: string, status: 'Scheduled' | 'Confirmed' | 'Completed') => {
+  const changeStatus = async (id: number, status: 'Scheduled' | 'Confirmed' | 'Completed') => {
     if (!activeWorkspace) return;
     try {
       await api.scheduleEntries.updateStatus(activeWorkspace, id, uiToScheduleStatus(status));

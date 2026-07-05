@@ -5,7 +5,7 @@ import { PriorityBadge } from '../components/ui/StatusChip';
 import { api, courseTypeLabel, formatDate, uiToCourseType, type CourseDto } from '../lib/api';
 
 type UiCourse = {
-  id: string;
+  id: number;
   externalId: string;
   name: string;
   nameEn: string;
@@ -55,7 +55,7 @@ export function Courses() {
   const [sortField, setSortField] = useState<keyof UiCourse>('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -67,7 +67,7 @@ export function Courses() {
   const card = `rounded-2xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} shadow-sm`;
 
   const emptyForm: UiCourse = {
-    id: '', externalId: '', name: '', nameEn: '', specialization: '', durationDays: 3, hoursPerDay: 8,
+    id: 0, externalId: '', name: '', nameEn: '', specialization: '', durationDays: 3, hoursPerDay: 8,
     expectedTrainees: 20, city: '', beneficiary: '', priority: 'Medium', type: 'In-person', earliestStart: '', latestEnd: '', notes: '', color: '#3B82F6',
   };
   const [form, setForm] = useState<UiCourse>(emptyForm);
@@ -172,7 +172,7 @@ export function Courses() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: number) => {
     if (!activeWorkspace) return;
     try {
       await api.courses.delete(activeWorkspace, id);
@@ -183,7 +183,7 @@ export function Courses() {
     }
   };
 
-  const toggleSelect = (id: string) => setSelected((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]);
+  const toggleSelect = (id: number) => setSelected((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]);
 
   return (
     <div className="p-6 space-y-5 overflow-y-auto h-full">

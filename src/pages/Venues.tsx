@@ -4,7 +4,7 @@ import { Plus, Search, Edit2, Trash2, X, MapPin, Users } from 'lucide-react';
 import { api, courseTypeLabel, uiToCourseType, type VenueDto } from '../lib/api';
 
 type UiVenue = {
-  id: string;
+  id: number;
   externalId: string;
   name: string;
   nameEn: string;
@@ -85,7 +85,7 @@ export function Venues() {
   const openCreate = () => {
     setSelected(null);
     setErrors({});
-    setForm({ id: '', externalId: '', name: '', nameEn: '', city: '', type: 'In-person', capacity: 20, availableFrom: '', availableTo: '', unavailableDates: [], equipmentNotes: '' });
+    setForm({ id: 0, externalId: '', name: '', nameEn: '', city: '', type: 'In-person', capacity: 20, availableFrom: '', availableTo: '', unavailableDates: [], equipmentNotes: '' });
     setShowDrawer(true);
   };
 
@@ -131,7 +131,7 @@ export function Venues() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: number) => {
     if (!activeWorkspace) return;
     try {
       await api.venues.delete(activeWorkspace, id);

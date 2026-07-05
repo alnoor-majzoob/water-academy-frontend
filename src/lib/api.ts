@@ -6,7 +6,7 @@ export type ScheduleStatus = 'SCHEDULED' | 'CONFIRMED' | 'COMPLETED';
 export type TaskStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
 
 export interface WorkspaceDto {
-  id: string;
+  id: number;
   name: string;
   description: string | null;
   year: number;
@@ -17,8 +17,8 @@ export interface WorkspaceDto {
 }
 
 export interface CourseDto {
-  id: string;
-  workspaceId: string;
+  id: number;
+  workspaceId: number;
   externalId: string | null;
   name: string;
   specialization: string | null;
@@ -39,8 +39,8 @@ export interface CourseDto {
 }
 
 export interface TrainerDto {
-  id: string;
-  workspaceId: string;
+  id: number;
+  workspaceId: number;
   externalId: string | null;
   name: string;
   specialties: string | null;
@@ -56,8 +56,8 @@ export interface TrainerDto {
 }
 
 export interface VenueDto {
-  id: string;
-  workspaceId: string;
+  id: number;
+  workspaceId: number;
   externalId: string | null;
   name: string;
   city: string | null;
@@ -72,8 +72,8 @@ export interface VenueDto {
 }
 
 export interface CalendarDayDto {
-  id: string;
-  workspaceId: string;
+  id: number;
+  workspaceId: number;
   date: string;
   isWorkDay: boolean;
   isHoliday: boolean;
@@ -81,21 +81,21 @@ export interface CalendarDayDto {
 }
 
 export interface AssignmentDto {
-  id: string;
-  workspaceId: string;
-  trainerId: string;
-  courseId: string;
+  id: number;
+  workspaceId: number;
+  trainerId: number;
+  courseId: number;
   createdAt: string;
 }
 
 export interface ScheduleEntryDto {
-  id: string;
-  workspaceId: string;
-  courseId: string;
+  id: number;
+  workspaceId: number;
+  courseId: number;
   courseName: string;
-  trainerId: string;
+  trainerId: number;
   trainerName: string;
-  venueId: string | null;
+  venueId: number | null;
   venueName: string | null;
   startDate: string;
   endDate: string;
@@ -106,8 +106,8 @@ export interface ScheduleEntryDto {
 }
 
 export interface TaskDto {
-  id: string;
-  workspaceId: string;
+  id: number;
+  workspaceId: number;
   status: TaskStatus;
   startedAt: string | null;
   completedAt: string | null;
@@ -171,84 +171,84 @@ export const api = {
     list: () => request<WorkspaceDto[]>('/api/workspaces'),
     create: (body: { name: string; description?: string | null; year: number; color?: string | null }) =>
       request<WorkspaceDto>('/api/workspaces', { method: 'POST', body: JSON.stringify(body) }),
-    update: (id: string, body: { name: string; description?: string | null; year: number; color?: string | null }) =>
+    update: (id: number, body: { name: string; description?: string | null; year: number; color?: string | null }) =>
       request<WorkspaceDto>(`/api/workspaces/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-    updateStatus: (id: string, status: WorkspaceStatus) =>
+    updateStatus: (id: number, status: WorkspaceStatus) =>
       request<WorkspaceDto>(`/api/workspaces/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
-    delete: (id: string) => request<void>(`/api/workspaces/${id}`, { method: 'DELETE' }),
+    delete: (id: number) => request<void>(`/api/workspaces/${id}`, { method: 'DELETE' }),
   },
   courses: {
-    list: (workspaceId: string) => request<CourseDto[]>(`/api/workspaces/${workspaceId}/courses`),
-    create: (workspaceId: string, body: Record<string, unknown>) =>
+    list: (workspaceId: number) => request<CourseDto[]>(`/api/workspaces/${workspaceId}/courses`),
+    create: (workspaceId: number, body: Record<string, unknown>) =>
       request<CourseDto>(`/api/workspaces/${workspaceId}/courses`, { method: 'POST', body: JSON.stringify(body) }),
-    update: (workspaceId: string, id: string, body: Record<string, unknown>) =>
+    update: (workspaceId: number, id: number, body: Record<string, unknown>) =>
       request<CourseDto>(`/api/workspaces/${workspaceId}/courses/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-    delete: (workspaceId: string, id: string) => request<void>(`/api/workspaces/${workspaceId}/courses/${id}`, { method: 'DELETE' }),
+    delete: (workspaceId: number, id: number) => request<void>(`/api/workspaces/${workspaceId}/courses/${id}`, { method: 'DELETE' }),
   },
   trainers: {
-    list: (workspaceId: string) => request<TrainerDto[]>(`/api/workspaces/${workspaceId}/trainers`),
-    create: (workspaceId: string, body: Record<string, unknown>) =>
+    list: (workspaceId: number) => request<TrainerDto[]>(`/api/workspaces/${workspaceId}/trainers`),
+    create: (workspaceId: number, body: Record<string, unknown>) =>
       request<TrainerDto>(`/api/workspaces/${workspaceId}/trainers`, { method: 'POST', body: JSON.stringify(body) }),
-    update: (workspaceId: string, id: string, body: Record<string, unknown>) =>
+    update: (workspaceId: number, id: number, body: Record<string, unknown>) =>
       request<TrainerDto>(`/api/workspaces/${workspaceId}/trainers/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-    delete: (workspaceId: string, id: string) => request<void>(`/api/workspaces/${workspaceId}/trainers/${id}`, { method: 'DELETE' }),
+    delete: (workspaceId: number, id: number) => request<void>(`/api/workspaces/${workspaceId}/trainers/${id}`, { method: 'DELETE' }),
   },
   venues: {
-    list: (workspaceId: string) => request<VenueDto[]>(`/api/workspaces/${workspaceId}/venues`),
-    create: (workspaceId: string, body: Record<string, unknown>) =>
+    list: (workspaceId: number) => request<VenueDto[]>(`/api/workspaces/${workspaceId}/venues`),
+    create: (workspaceId: number, body: Record<string, unknown>) =>
       request<VenueDto>(`/api/workspaces/${workspaceId}/venues`, { method: 'POST', body: JSON.stringify(body) }),
-    update: (workspaceId: string, id: string, body: Record<string, unknown>) =>
+    update: (workspaceId: number, id: number, body: Record<string, unknown>) =>
       request<VenueDto>(`/api/workspaces/${workspaceId}/venues/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-    delete: (workspaceId: string, id: string) => request<void>(`/api/workspaces/${workspaceId}/venues/${id}`, { method: 'DELETE' }),
+    delete: (workspaceId: number, id: number) => request<void>(`/api/workspaces/${workspaceId}/venues/${id}`, { method: 'DELETE' }),
   },
   calendarDays: {
-    list: (workspaceId: string) => request<CalendarDayDto[]>(`/api/workspaces/${workspaceId}/calendar-days`),
-    create: (workspaceId: string, body: { date: string; isWorkDay: boolean; isHoliday: boolean }) =>
+    list: (workspaceId: number) => request<CalendarDayDto[]>(`/api/workspaces/${workspaceId}/calendar-days`),
+    create: (workspaceId: number, body: { date: string; isWorkDay: boolean; isHoliday: boolean }) =>
       request<CalendarDayDto>(`/api/workspaces/${workspaceId}/calendar-days`, { method: 'POST', body: JSON.stringify(body) }),
-    bulkCreate: (workspaceId: string, body: { date: string; isWorkDay: boolean; isHoliday: boolean }[]) =>
+    bulkCreate: (workspaceId: number, body: { date: string; isWorkDay: boolean; isHoliday: boolean }[]) =>
       request<CalendarDayDto[]>(`/api/workspaces/${workspaceId}/calendar-days/bulk`, { method: 'POST', body: JSON.stringify(body) }),
-    update: (workspaceId: string, id: string, body: { date: string; isWorkDay: boolean; isHoliday: boolean }) =>
+    update: (workspaceId: number, id: number, body: { date: string; isWorkDay: boolean; isHoliday: boolean }) =>
       request<CalendarDayDto>(`/api/workspaces/${workspaceId}/calendar-days/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-    delete: (workspaceId: string, id: string) => request<void>(`/api/workspaces/${workspaceId}/calendar-days/${id}`, { method: 'DELETE' }),
+    delete: (workspaceId: number, id: number) => request<void>(`/api/workspaces/${workspaceId}/calendar-days/${id}`, { method: 'DELETE' }),
   },
   assignments: {
-    list: (workspaceId: string) => request<AssignmentDto[]>(`/api/workspaces/${workspaceId}/assignments`),
-    create: (workspaceId: string, body: { trainerId: string; courseId: string }) =>
+    list: (workspaceId: number) => request<AssignmentDto[]>(`/api/workspaces/${workspaceId}/assignments`),
+    create: (workspaceId: number, body: { trainerId: number; courseId: number }) =>
       request<AssignmentDto>(`/api/workspaces/${workspaceId}/assignments`, { method: 'POST', body: JSON.stringify(body) }),
-    delete: (workspaceId: string, id: string) => request<void>(`/api/workspaces/${workspaceId}/assignments/${id}`, { method: 'DELETE' }),
+    delete: (workspaceId: number, id: number) => request<void>(`/api/workspaces/${workspaceId}/assignments/${id}`, { method: 'DELETE' }),
   },
   scheduleEntries: {
-    list: (workspaceId: string) => request<ScheduleEntryDto[]>(`/api/workspaces/${workspaceId}/schedule-entries`),
-    create: (workspaceId: string, body: Record<string, unknown>) =>
+    list: (workspaceId: number) => request<ScheduleEntryDto[]>(`/api/workspaces/${workspaceId}/schedule-entries`),
+    create: (workspaceId: number, body: Record<string, unknown>) =>
       request<ScheduleEntryDto>(`/api/workspaces/${workspaceId}/schedule-entries`, { method: 'POST', body: JSON.stringify(body) }),
-    update: (workspaceId: string, id: string, body: Record<string, unknown>) =>
+    update: (workspaceId: number, id: number, body: Record<string, unknown>) =>
       request<ScheduleEntryDto>(`/api/workspaces/${workspaceId}/schedule-entries/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-    updateStatus: (workspaceId: string, id: string, status: ScheduleStatus) =>
+    updateStatus: (workspaceId: number, id: number, status: ScheduleStatus) =>
       request<ScheduleEntryDto>(`/api/workspaces/${workspaceId}/schedule-entries/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
-    delete: (workspaceId: string, id: string) => request<void>(`/api/workspaces/${workspaceId}/schedule-entries/${id}`, { method: 'DELETE' }),
-    venueConflicts: (workspaceId: string, venueId: string, startDate: string, endDate: string) =>
+    delete: (workspaceId: number, id: number) => request<void>(`/api/workspaces/${workspaceId}/schedule-entries/${id}`, { method: 'DELETE' }),
+    venueConflicts: (workspaceId: number, venueId: number, startDate: string, endDate: string) =>
       request<ScheduleEntryDto[]>(`/api/workspaces/${workspaceId}/schedule-entries/conflicts/venue?venueId=${encodeURIComponent(venueId)}&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`),
-    trainerConflicts: (workspaceId: string, trainerId: string, startDate: string, endDate: string) =>
+    trainerConflicts: (workspaceId: number, trainerId: number, startDate: string, endDate: string) =>
       request<ScheduleEntryDto[]>(`/api/workspaces/${workspaceId}/schedule-entries/conflicts/trainer?trainerId=${encodeURIComponent(trainerId)}&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`),
   },
   tasks: {
-    list: (workspaceId: string) => request<TaskDto[]>(`/api/workspaces/${workspaceId}/tasks`),
-    create: (workspaceId: string) => request<TaskDto>(`/api/workspaces/${workspaceId}/tasks`, { method: 'POST' }),
-    start: (workspaceId: string, id: string) => request<TaskDto>(`/api/workspaces/${workspaceId}/tasks/${id}/start`, { method: 'POST' }),
-    complete: (workspaceId: string, id: string, log: string) => request<TaskDto>(`/api/workspaces/${workspaceId}/tasks/${id}/complete`, { method: 'POST', body: log }),
-    fail: (workspaceId: string, id: string, log: string) => request<TaskDto>(`/api/workspaces/${workspaceId}/tasks/${id}/fail`, { method: 'POST', body: log }),
-    delete: (workspaceId: string, id: string) => request<void>(`/api/workspaces/${workspaceId}/tasks/${id}`, { method: 'DELETE' }),
+    list: (workspaceId: number) => request<TaskDto[]>(`/api/workspaces/${workspaceId}/tasks`),
+    create: (workspaceId: number) => request<TaskDto>(`/api/workspaces/${workspaceId}/tasks`, { method: 'POST' }),
+    start: (workspaceId: number, id: number) => request<TaskDto>(`/api/workspaces/${workspaceId}/tasks/${id}/start`, { method: 'POST' }),
+    complete: (workspaceId: number, id: number, log: string) => request<TaskDto>(`/api/workspaces/${workspaceId}/tasks/${id}/complete`, { method: 'POST', body: log }),
+    fail: (workspaceId: number, id: number, log: string) => request<TaskDto>(`/api/workspaces/${workspaceId}/tasks/${id}/fail`, { method: 'POST', body: log }),
+    delete: (workspaceId: number, id: number) => request<void>(`/api/workspaces/${workspaceId}/tasks/${id}`, { method: 'DELETE' }),
   },
   schedule: {
-    run: (workspaceId: string, mode: 'new' | 'update') =>
+    run: (workspaceId: number, mode: 'new' | 'update') =>
       request<TaskDto>(`/api/workspaces/${workspaceId}/schedule?mode=${mode}`, { method: 'POST' }),
   },
-  importExcel: async (workspaceId: string, file: File) => {
+  importExcel: async (workspaceId: number, file: File) => {
     const form = new FormData();
     form.append('file', file);
     return request<ImportResultDto>(`/api/workspaces/${workspaceId}/import`, { method: 'POST', body: form });
   },
-  exportExcel: (workspaceId: string, params?: { sheets?: string[]; type?: string }) => {
+  exportExcel: (workspaceId: number, params?: { sheets?: string[]; type?: string }) => {
     const query = new URLSearchParams();
     if (params?.sheets?.length) query.set('sheets', params.sheets.join(','));
     if (params?.type) query.set('type', params.type);

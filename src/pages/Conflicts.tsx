@@ -5,12 +5,12 @@ import { SeverityBadge } from '../components/ui/StatusChip';
 import { api, type ScheduleEntryDto } from '../lib/api';
 
 type Conflict = {
-  id: string;
+  id: number;
   type: 'Trainer' | 'Venue' | 'DateOverlap' | 'Capacity' | 'Holiday' | 'Mismatch';
   severity: 'Critical' | 'Warning' | 'Info';
   description: string;
   descriptionEn: string;
-  affectedEntries: string[];
+  affectedEntries: number[];
   resolved: boolean;
 };
 
@@ -28,7 +28,7 @@ export function Conflicts() {
   const { lang, theme, addToast, activeWorkspace } = useApp();
   const isDark = theme === 'dark';
   const [selectedConflict, setSelectedConflict] = useState<Conflict | null>(null);
-  const [resolvedIds, setResolvedIds] = useState<string[]>([]);
+  const [resolvedIds, setResolvedIds] = useState<number[]>([]);
   const [entries, setEntries] = useState<ScheduleEntryDto[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -65,7 +65,7 @@ export function Conflicts() {
   const active = conflicts.filter((c) => !c.resolved);
   const resolved = conflicts.filter((c) => c.resolved);
 
-  const handleResolve = (id: string) => {
+  const handleResolve = (id: number) => {
     setResolvedIds((prev) => [...prev, id]);
     setSelectedConflict(null);
     addToast('success', t('تم تعليم التعارض كمحلول في الواجهة', 'Conflict marked as resolved in the UI', lang));
@@ -80,7 +80,7 @@ export function Conflicts() {
           <SeverityBadge severity={conflict.severity} />
         </div>
         <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{t(conflict.description, conflict.descriptionEn, lang)}</p>
-        <div className="flex items-center justify-between mt-4"><span className={`text-xs font-mono ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>#{conflict.id.slice(0, 8)}</span><button onClick={(e) => { e.stopPropagation(); handleResolve(conflict.id); }} className="text-xs text-blue-600 hover:text-blue-800 font-medium">{t('حل التعارض', 'Resolve', lang)}</button></div>
+        <div className="flex items-center justify-between mt-4"><span className={`text-xs font-mono ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>#{String(conflict.id).slice(0, 8)}</span><button onClick={(e) => { e.stopPropagation(); handleResolve(conflict.id); }} className="text-xs text-blue-600 hover:text-blue-800 font-medium">{t('حل التعارض', 'Resolve', lang)}</button></div>
       </div>
     );
   };

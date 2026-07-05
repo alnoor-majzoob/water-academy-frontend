@@ -15,8 +15,8 @@ interface AppContextType {
   setLang: (l: Lang) => void;
   theme: Theme;
   setTheme: (t: Theme) => void;
-  activeWorkspace: string;
-  setActiveWorkspace: (id: string) => void;
+  activeWorkspace: number;
+  setActiveWorkspace: (id: number) => void;
   workspaces: WorkspaceDto[];
   currentWorkspace: WorkspaceDto | null;
   loadingWorkspaces: boolean;
@@ -33,7 +33,7 @@ const AppContext = createContext<AppContextType | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>('ar');
   const [theme, setThemeState] = useState<Theme>('light');
-  const [activeWorkspace, setActiveWorkspace] = useState('');
+  const [activeWorkspace, setActiveWorkspace] = useState(0);
   const [workspaces, setWorkspaces] = useState<WorkspaceDto[]>([]);
   const [loadingWorkspaces, setLoadingWorkspaces] = useState(true);
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -75,7 +75,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setWorkspaces(data);
       setActiveWorkspace((prev) => {
         if (prev && data.some((item) => item.id === prev)) return prev;
-        return data[0]?.id || '';
+        return data[0]?.id || 0;
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to load workspaces';
