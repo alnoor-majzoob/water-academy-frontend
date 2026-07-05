@@ -33,6 +33,7 @@ export function Tasks() {
   const [expandedTask, setExpandedTask] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const card = `rounded-2xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} shadow-sm`;
 
@@ -68,14 +69,21 @@ export function Tasks() {
 
   const runScheduler = async (mode: 'new' | 'update') => {
     if (!activeWorkspace) return;
+    setCreating(true);
     try {
-      await api.schedule.run(activeWorkspace, mode);
+      const taskDto = await api.schedule.run(activeWorkspace, mode);
+      setTasks(prev => [mapTask(taskDto), ...prev]);
+      setShowScheduleDialog(false);
       addToast('success', t('تم بدء الجدولة', 'Scheduling started', lang));
-      await loadTasks();
+      void loadTasks();
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Failed to start scheduler');
+    } finally {
+      setCreating(false);
     }
   };
+
+  const handleSchedule = (mode: 'new' | 'update') => () => void runScheduler(mode);
 
   const statusIcon: Record<UiTask['status'], string> = { Pending: '⏳', Running: '⚡', Completed: '✅', Failed: '❌' };
 
@@ -152,12 +160,14 @@ export function Tasks() {
               {t('اختر وضع الجدولة:', 'Choose scheduling mode:', lang)}
             </p>
             <div className="flex gap-3">
-              <button onClick={() => { setShowScheduleDialog(false); void runScheduler('new'); }}
-                className="flex-1 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-medium text-sm">
+              <button onClick={handleSchedule('new')} disabled={creating}
+                className="flex-1 py-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-xl font-medium text-sm flex items-center justify-center gap-2">
+                {creating ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
                 {t('جديد (مسح الكل)', 'New (Replace All)', lang)}
               </button>
-              <button onClick={() => { setShowScheduleDialog(false); void runScheduler('update'); }}
-                className={`flex-1 py-3 rounded-xl font-medium text-sm border ${isDark ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+              <button onClick={handleSchedule('update')} disabled={creating}
+                className={`flex-1 py-3 rounded-xl font-medium text-sm border flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed ${isDark ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                {creating ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : null}
                 {t('تحديث (إضافة)', 'Update (Append)', lang)}
               </button>
             </div>
