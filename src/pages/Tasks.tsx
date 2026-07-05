@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp, t } from '../context/AppContext';
-import { Play, ChevronDown, ChevronUp, RefreshCw, Plus } from 'lucide-react';
+import { Play, ChevronDown, ChevronUp, RefreshCw, Plus, CalendarRange } from 'lucide-react';
 import { StatusChip } from '../components/ui/StatusChip';
 import { api, taskStatusLabel, type TaskDto } from '../lib/api';
 
@@ -32,6 +32,7 @@ export function Tasks() {
   const [tasks, setTasks] = useState<UiTask[]>([]);
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
 
   const card = `rounded-2xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} shadow-sm`;
 
@@ -63,14 +64,16 @@ export function Tasks() {
     }
   };
 
-  const createTask = async () => {
+  const openScheduleDialog = () => setShowScheduleDialog(true);
+
+  const runScheduler = async (mode: 'new' | 'update') => {
     if (!activeWorkspace) return;
     try {
-      await api.tasks.create(activeWorkspace);
-      addToast('success', t('تم إنشاء مهمة جديدة', 'Task created', lang));
+      await api.schedule.run(activeWorkspace, mode);
+      addToast('success', t('تم بدء الجدولة', 'Scheduling started', lang));
       await loadTasks();
     } catch (error) {
-      addToast('error', error instanceof Error ? error.message : 'Task creation failed');
+      addToast('error', error instanceof Error ? error.message : 'Failed to start scheduler');
     }
   };
 
@@ -91,7 +94,7 @@ export function Tasks() {
           <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t('مهام الجدولة ومعالجة البيانات', 'Scheduling & processing tasks', lang)}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => void createTask()} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white"><Plus size={14} /> {t('مهمة جديدة', 'New Task', lang)}</button>
+          <button onClick={openScheduleDialog} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white"><Plus size={14} /> {t('مهمة جديدة', 'New Task', lang)}</button>
           <button onClick={() => void loadTasks()} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border ${isDark ? 'border-slate-700 text-slate-300 hover:bg-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}><RefreshCw size={14} /> {t('تحديث', 'Refresh', lang)}</button>
         </div>
       </div>
@@ -136,6 +139,35 @@ export function Tasks() {
         ))}
       </div>
       </>)}
+      {showScheduleDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className={`w-full max-w-sm rounded-2xl shadow-2xl p-6 ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
+            <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center mx-auto mb-4">
+              <CalendarRange size={24} className="text-teal-600" />
+            </div>
+            <h2 className={`text-center font-bold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>
+              {t('بدء الجدولة الذكية', 'Start Smart Scheduling', lang)}
+            </h2>
+            <p className={`text-center text-sm mb-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              {t('اختر وضع الجدولة:', 'Choose scheduling mode:', lang)}
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => { setShowScheduleDialog(false); void runScheduler('new'); }}
+                className="flex-1 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-medium text-sm">
+                {t('جديد (مسح الكل)', 'New (Replace All)', lang)}
+              </button>
+              <button onClick={() => { setShowScheduleDialog(false); void runScheduler('update'); }}
+                className={`flex-1 py-3 rounded-xl font-medium text-sm border ${isDark ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                {t('تحديث (إضافة)', 'Update (Append)', lang)}
+              </button>
+            </div>
+            <button onClick={() => setShowScheduleDialog(false)}
+              className={`w-full mt-3 py-2 text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+              {t('إلغاء', 'Cancel', lang)}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

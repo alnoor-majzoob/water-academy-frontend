@@ -239,6 +239,10 @@ export const api = {
     fail: (workspaceId: string, id: string, log: string) => request<TaskDto>(`/api/workspaces/${workspaceId}/tasks/${id}/fail`, { method: 'POST', body: log }),
     delete: (workspaceId: string, id: string) => request<void>(`/api/workspaces/${workspaceId}/tasks/${id}`, { method: 'DELETE' }),
   },
+  schedule: {
+    run: (workspaceId: string, mode: 'new' | 'update') =>
+      request<TaskDto>(`/api/workspaces/${workspaceId}/schedule?mode=${mode}`, { method: 'POST' }),
+  },
   importExcel: async (workspaceId: string, file: File) => {
     const form = new FormData();
     form.append('file', file);
@@ -258,15 +262,15 @@ export function formatDate(value?: string | null): string {
 }
 
 export function workspaceStatusLabel(status: WorkspaceStatus): 'Draft' | 'Imported' | 'Optimized' | 'Disabled' {
-  return ({ DRAFT: 'Draft', IMPORTED: 'Imported', OPTIMIZED: 'Optimized', DISABLED: 'Disabled' })[status];
+  return ({ DRAFT: 'Draft', IMPORTED: 'Imported', OPTIMIZED: 'Optimized', DISABLED: 'Disabled' } as const)[status];
 }
 
 export function uiToWorkspaceStatus(status: 'Draft' | 'Imported' | 'Optimized' | 'Disabled'): WorkspaceStatus {
-  return ({ Draft: 'DRAFT', Imported: 'IMPORTED', Optimized: 'OPTIMIZED', Disabled: 'DISABLED' })[status];
+  return ({ Draft: 'DRAFT', Imported: 'IMPORTED', Optimized: 'OPTIMIZED', Disabled: 'DISABLED' } as const)[status];
 }
 
 export function courseTypeLabel(type: CourseType): 'In-person' | 'Online' | 'External' {
-  return ({ IN_PERSON: 'In-person', ONLINE: 'Online', EXTERNAL: 'External' })[type];
+  return ({ IN_PERSON: 'In-person', ONLINE: 'Online', EXTERNAL: 'External' } as const)[type];
 }
 
 export function uiToCourseType(type: string): CourseType {
@@ -275,13 +279,13 @@ export function uiToCourseType(type: string): CourseType {
 
 export function scheduleStatusLabel(status: ScheduleStatus, conflictNotes?: string | null): 'Scheduled' | 'Confirmed' | 'Completed' | 'Conflict' {
   if (conflictNotes) return 'Conflict';
-  return ({ SCHEDULED: 'Scheduled', CONFIRMED: 'Confirmed', COMPLETED: 'Completed' })[status];
+  return ({ SCHEDULED: 'Scheduled', CONFIRMED: 'Confirmed', COMPLETED: 'Completed' } as const)[status];
 }
 
 export function uiToScheduleStatus(status: 'Scheduled' | 'Confirmed' | 'Completed'): ScheduleStatus {
-  return ({ Scheduled: 'SCHEDULED', Confirmed: 'CONFIRMED', Completed: 'COMPLETED' })[status];
+  return ({ Scheduled: 'SCHEDULED', Confirmed: 'CONFIRMED', Completed: 'COMPLETED' } as const)[status];
 }
 
 export function taskStatusLabel(status: TaskStatus): 'Pending' | 'Running' | 'Completed' | 'Failed' {
-  return ({ PENDING: 'Pending', RUNNING: 'Running', COMPLETED: 'Completed', FAILED: 'Failed' })[status];
+  return ({ PENDING: 'Pending', RUNNING: 'Running', COMPLETED: 'Completed', FAILED: 'Failed' } as const)[status];
 }
