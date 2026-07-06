@@ -278,6 +278,15 @@ export function Schedule() {
                     </td>
                   </tr>
                 ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className={`text-center py-12 text-sm ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                      {entries.length === 0
+                        ? t('لا توجد مدخلات جدول بعد. اضف مدخلا جديدا', 'No schedule entries yet. Add a new entry.', lang)
+                        : t('لا توجد مدخلات تطابق الفلتر', 'No entries match the current filters', lang)}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
