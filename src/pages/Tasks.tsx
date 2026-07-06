@@ -12,7 +12,6 @@ type UiTask = {
   status: 'Pending' | 'Running' | 'Completed' | 'Failed';
   startedAt: string;
   completedAt?: string;
-  createdAt: string;
   log: string[];
   progress: number;
 };
@@ -50,7 +49,6 @@ export function Tasks() {
     status: taskStatusLabel(task.status),
     startedAt: task.startedAt || '',
     completedAt: task.completedAt || undefined,
-    createdAt: task.createdAt,
     log: task.log ? task.log.split('\n').filter(Boolean) : [],
     progress: task.status === 'COMPLETED' ? 100 : task.status === 'RUNNING' ? 50 : 0,
   });
@@ -198,11 +196,7 @@ export function Tasks() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1"><h3 className={`font-bold text-sm ${isDark ? 'text-white' : 'text-slate-800'}`}>{task.type}</h3><span className={`text-xs font-mono px-1.5 py-0.5 rounded ${isDark ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>#{String(task.id).slice(0, 8)}</span></div>
                       <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{currentWorkspace?.name || task.workspace}</p>
-                      <p className={`text-xs mt-1 space-x-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                        <span>{t('أنشئ:', 'Created:', lang)} {formatRelative(task.createdAt)}</span>
-                        {task.startedAt && <span>· {t('بدء:', 'Started:', lang)} {new Date(task.startedAt).toLocaleString(lang === 'ar' ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>}
-                        {task.completedAt && <span>· {t('انتهاء:', 'Completed:', lang)} {new Date(task.completedAt).toLocaleString(lang === 'ar' ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>}
-                      </p>
+                      {(task.startedAt || task.completedAt) && <p className={`text-xs mt-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{task.startedAt && `${t('بدء:', 'Started:', lang)} ${formatRelative(task.startedAt)}`} {task.completedAt && `· ${t('انتهاء:', 'Completed:', lang)} ${formatRelative(task.completedAt)}`}</p>}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
