@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp, t } from '../context/AppContext';
 import { Plus, X, AlertCircle } from 'lucide-react';
+import { Modal } from '../components/ui/Modal';
 import { api, type AssignmentDto, type CourseDto, type TrainerDto } from '../lib/api';
 
 type UiAssignment = {
@@ -222,46 +223,38 @@ export function Assignments() {
       )}
       </>)}
 
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className={`w-full max-w-md rounded-2xl shadow-2xl p-6 ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className={`font-bold text-lg ${isDark ? 'text-white' : 'text-slate-800'}`}>{t('إضافة تعيين', 'Add Assignment', lang)}</h2>
-              <button onClick={() => setShowModal(false)}><X size={20} /></button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('الدورة', 'Course', lang)}</label>
-                <select value={form.courseId} onChange={(e) => setForm((p) => ({ ...p, courseId: e.target.value }))} className={inputCls}>
-                  <option value="">{t('اختر الدورة', 'Select Course', lang)}</option>
-                  {courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('المدرب', 'Trainer', lang)}</label>
-                <select value={form.trainerId} onChange={(e) => setForm((p) => ({ ...p, trainerId: e.target.value }))} className={inputCls}>
-                  <option value="">{t('اختر المدرب', 'Select Trainer', lang)}</option>
-                  {trainers.map((tr) => <option key={tr.id} value={tr.id}>{tr.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('التخصص', 'Specialty', lang)}</label>
-                <input value={form.specialty} onChange={(e) => setForm((p) => ({ ...p, specialty: e.target.value }))} className={inputCls} placeholder={t('أدخل التخصص', 'Enter specialty', lang)} />
-              </div>
-              {assignments.some((a) => a.courseId === Number(form.courseId) && a.trainerId === Number(form.trainerId)) && (
-                <div className={`flex items-center gap-2 p-3 rounded-xl ${isDark ? 'bg-amber-900/30 text-amber-300' : 'bg-amber-50 text-amber-700'}`}>
-                  <AlertCircle size={14} />
-                  <span className="text-xs">{t('هذا التعيين موجود مسبقاً', 'This assignment already exists', lang)}</span>
-                </div>
-              )}
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => void handleSave()} disabled={saving} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${saving ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white`}>{saving ? t('جاري الحفظ...', 'Saving...', lang) : t('حفظ', 'Save', lang)}</button>
-              <button onClick={() => setShowModal(false)} className={`flex-1 py-2.5 rounded-xl text-sm border ${isDark ? 'border-slate-600 text-slate-300' : 'border-slate-200 text-slate-600'}`}>{t('إلغاء', 'Cancel', lang)}</button>
-            </div>
+      <Modal open={showModal} onClose={() => setShowModal(false)} maxWidth="max-w-md" title={t('إضافة تعيين', 'Add Assignment', lang)}>
+        <div className="space-y-4">
+          <div>
+            <label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('الدورة', 'Course', lang)}</label>
+            <select value={form.courseId} onChange={(e) => setForm((p) => ({ ...p, courseId: e.target.value }))} className={inputCls}>
+              <option value="">{t('اختر الدورة', 'Select Course', lang)}</option>
+              {courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
           </div>
+          <div>
+            <label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('المدرب', 'Trainer', lang)}</label>
+            <select value={form.trainerId} onChange={(e) => setForm((p) => ({ ...p, trainerId: e.target.value }))} className={inputCls}>
+              <option value="">{t('اختر المدرب', 'Select Trainer', lang)}</option>
+              {trainers.map((tr) => <option key={tr.id} value={tr.id}>{tr.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('التخصص', 'Specialty', lang)}</label>
+            <input value={form.specialty} onChange={(e) => setForm((p) => ({ ...p, specialty: e.target.value }))} className={inputCls} placeholder={t('أدخل التخصص', 'Enter specialty', lang)} />
+          </div>
+          {assignments.some((a) => a.courseId === Number(form.courseId) && a.trainerId === Number(form.trainerId)) && (
+            <div className={`flex items-center gap-2 p-3 rounded-xl ${isDark ? 'bg-amber-900/30 text-amber-300' : 'bg-amber-50 text-amber-700'}`}>
+              <AlertCircle size={14} />
+              <span className="text-xs">{t('هذا التعيين موجود مسبقاً', 'This assignment already exists', lang)}</span>
+            </div>
+          )}
         </div>
-      )}
+        <div className="flex gap-3 mt-6">
+          <button onClick={() => void handleSave()} disabled={saving} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${saving ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white`}>{saving ? t('جاري الحفظ...', 'Saving...', lang) : t('حفظ', 'Save', lang)}</button>
+          <button onClick={() => setShowModal(false)} className={`flex-1 py-2.5 rounded-xl text-sm border ${isDark ? 'border-slate-600 text-slate-300' : 'border-slate-200 text-slate-600'}`}>{t('إلغاء', 'Cancel', lang)}</button>
+        </div>
+      </Modal>
     </div>
   );
 }

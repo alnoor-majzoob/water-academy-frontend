@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useApp, t } from '../context/AppContext';
 import { Plus, Calendar, List, LayoutGrid, Filter, AlertTriangle, X, Check, Lock } from 'lucide-react';
 import { StatusChip } from '../components/ui/StatusChip';
+import { Modal } from '../components/ui/Modal';
 import { api, scheduleStatusLabel, uiToScheduleStatus, type CourseDto, type ScheduleEntryDto, type TrainerDto, type VenueDto } from '../lib/api';
 
 type ViewType = 'calendar' | 'table' | 'kanban';
@@ -286,32 +287,23 @@ export function Schedule() {
       )}
       </>)}
 
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className={`w-full max-w-lg rounded-2xl shadow-2xl p-6 ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
-            <div className="flex items-center justify-between mb-5"><h2 className={`font-bold text-lg ${isDark ? 'text-white' : 'text-slate-800'}`}>{t('إنشاء مدخل جدول', 'Create Schedule Entry', lang)}</h2><button onClick={() => setShowModal(false)}><X size={20} className={isDark ? 'text-slate-400' : 'text-slate-500'} /></button></div>
-            <div className="space-y-4">
-              <div><label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('الدورة', 'Course', lang)}</label><select value={form.courseId} onChange={(e) => setForm((p) => ({ ...p, courseId: e.target.value }))} className={inputCls}><option value="">{t('اختر الدورة', 'Select Course', lang)}</option>{courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-              <div><label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('المدرب', 'Trainer', lang)}</label><select value={form.trainerId} onChange={(e) => setForm((p) => ({ ...p, trainerId: e.target.value }))} className={inputCls}><option value="">{t('اختر المدرب', 'Select Trainer', lang)}</option>{trainers.map((tr) => <option key={tr.id} value={tr.id}>{tr.name}</option>)}</select></div>
-              <div><label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('القاعة', 'Venue', lang)}</label><select value={form.venueId} onChange={(e) => setForm((p) => ({ ...p, venueId: e.target.value }))} className={inputCls}><option value="">{t('اختر القاعة', 'Select Venue', lang)}</option>{venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></div>
-              <div className="grid grid-cols-2 gap-3"><div><label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('تاريخ البداية', 'Start Date', lang)}</label><input type="date" value={form.startDate} onChange={(e) => setForm((p) => ({ ...p, startDate: e.target.value }))} className={inputCls} /></div><div><label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('تاريخ النهاية', 'End Date', lang)}</label><input type="date" value={form.endDate} onChange={(e) => setForm((p) => ({ ...p, endDate: e.target.value }))} className={inputCls} /></div></div>
-              <div><label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('ملاحظات', 'Notes', lang)}</label><textarea value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} rows={2} className={inputCls + ' resize-none'} /></div>
-            </div>
-            <div className="flex gap-3 mt-6"><button onClick={() => void handleSaveEntry()} disabled={saving} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${saving ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white`}>{saving ? t('جاري الحفظ...', 'Saving...', lang) : t('حفظ', 'Save', lang)}</button><button onClick={() => setShowModal(false)} className={`flex-1 py-2.5 rounded-xl text-sm border ${isDark ? 'border-slate-600 text-slate-300' : 'border-slate-200 text-slate-600'}`}>{t('إلغاء', 'Cancel', lang)}</button></div>
-          </div>
+      <Modal open={showModal} onClose={() => setShowModal(false)} maxWidth="max-w-lg" title={t('إنشاء مدخل جدول', 'Create Schedule Entry', lang)}>
+        <div className="space-y-4">
+          <div><label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('الدورة', 'Course', lang)}</label><select value={form.courseId} onChange={(e) => setForm((p) => ({ ...p, courseId: e.target.value }))} className={inputCls}><option value="">{t('اختر الدورة', 'Select Course', lang)}</option>{courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+          <div><label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('المدرب', 'Trainer', lang)}</label><select value={form.trainerId} onChange={(e) => setForm((p) => ({ ...p, trainerId: e.target.value }))} className={inputCls}><option value="">{t('اختر المدرب', 'Select Trainer', lang)}</option>{trainers.map((tr) => <option key={tr.id} value={tr.id}>{tr.name}</option>)}</select></div>
+          <div><label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('القاعة', 'Venue', lang)}</label><select value={form.venueId} onChange={(e) => setForm((p) => ({ ...p, venueId: e.target.value }))} className={inputCls}><option value="">{t('اختر القاعة', 'Select Venue', lang)}</option>{venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></div>
+          <div className="grid grid-cols-2 gap-3"><div><label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('تاريخ البداية', 'Start Date', lang)}</label><input type="date" value={form.startDate} onChange={(e) => setForm((p) => ({ ...p, startDate: e.target.value }))} className={inputCls} /></div><div><label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('تاريخ النهاية', 'End Date', lang)}</label><input type="date" value={form.endDate} onChange={(e) => setForm((p) => ({ ...p, endDate: e.target.value }))} className={inputCls} /></div></div>
+          <div><label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{t('ملاحظات', 'Notes', lang)}</label><textarea value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} rows={2} className={inputCls + ' resize-none'} /></div>
         </div>
-      )}
+        <div className="flex gap-3 mt-6"><button onClick={() => void handleSaveEntry()} disabled={saving} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${saving ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white`}>{saving ? t('جاري الحفظ...', 'Saving...', lang) : t('حفظ', 'Save', lang)}</button><button onClick={() => setShowModal(false)} className={`flex-1 py-2.5 rounded-xl text-sm border ${isDark ? 'border-slate-600 text-slate-300' : 'border-slate-200 text-slate-600'}`}>{t('إلغاء', 'Cancel', lang)}</button></div>
+      </Modal>
 
-      {showConflictWarning && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className={`w-full max-w-sm rounded-2xl shadow-2xl p-6 ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
-            <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4"><AlertTriangle size={24} className="text-red-600" /></div>
-            <h3 className={`text-center font-bold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>{t('تحذير: تعارض!', 'Warning: Conflict!', lang)}</h3>
-            <p className={`text-center text-sm mb-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t('هناك تعارض مع مدرب أو قاعة في نفس الفترة. هل تريد الحفظ مع التعارض؟', 'There is a trainer or venue conflict in the same period. Save with conflict anyway?', lang)}</p>
-            <div className="flex gap-3"><button onClick={() => pendingPayload && void persistEntry(pendingPayload)} disabled={saving} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${saving ? 'bg-red-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'} text-white`}>{saving ? t('جاري الحفظ...', 'Saving...', lang) : t('حفظ مع التعارض', 'Save with Conflict', lang)}</button><button onClick={() => setShowConflictWarning(false)} className={`flex-1 py-2.5 rounded-xl text-sm border ${isDark ? 'border-slate-600 text-slate-300' : 'border-slate-200 text-slate-600'}`}>{t('مراجعة', 'Review', lang)}</button></div>
-          </div>
-        </div>
-      )}
+      <Modal open={showConflictWarning} onClose={() => setShowConflictWarning(false)} maxWidth="max-w-sm">
+        <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4"><AlertTriangle size={24} className="text-red-600" /></div>
+        <h3 className={`text-center font-bold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>{t('تحذير: تعارض!', 'Warning: Conflict!', lang)}</h3>
+        <p className={`text-center text-sm mb-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t('هناك تعارض مع مدرب أو قاعة في نفس الفترة. هل تريد الحفظ مع التعارض؟', 'There is a trainer or venue conflict in the same period. Save with conflict anyway?', lang)}</p>
+        <div className="flex gap-3"><button onClick={() => pendingPayload && void persistEntry(pendingPayload)} disabled={saving} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${saving ? 'bg-red-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'} text-white`}>{saving ? t('جاري الحفظ...', 'Saving...', lang) : t('حفظ مع التعارض', 'Save with Conflict', lang)}</button><button onClick={() => setShowConflictWarning(false)} className={`flex-1 py-2.5 rounded-xl text-sm border ${isDark ? 'border-slate-600 text-slate-300' : 'border-slate-200 text-slate-600'}`}>{t('مراجعة', 'Review', lang)}</button></div>
+      </Modal>
     </div>
   );
 }
