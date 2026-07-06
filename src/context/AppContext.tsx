@@ -31,8 +31,12 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>('ar');
-  const [theme, setThemeState] = useState<Theme>('light');
+  const [lang, setLangState] = useState<Lang>(
+    () => (localStorage.getItem('app-lang') as Lang) || 'ar'
+  );
+  const [theme, setThemeState] = useState<Theme>(
+    () => (localStorage.getItem('app-theme') as Theme) || 'light'
+  );
   const [activeWorkspace, setActiveWorkspace] = useState(0);
   const [workspaces, setWorkspaces] = useState<WorkspaceDto[]>([]);
   const [loadingWorkspaces, setLoadingWorkspaces] = useState(true);
@@ -41,6 +45,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const setLang = (l: Lang) => {
     setLangState(l);
+    localStorage.setItem('app-lang', l);
     document.documentElement.dir = l === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.lang = l;
     document.title = l === 'ar'
@@ -51,6 +56,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const setTheme = (t: Theme) => {
     setThemeState(t);
+    localStorage.setItem('app-theme', t);
     if (t === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
@@ -87,8 +93,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void reloadWorkspaces();
-    setLang('ar');
-    setTheme('light');
+    setLang(lang);
+    setTheme(theme);
   }, []);
 
   const currentWorkspace = useMemo(
