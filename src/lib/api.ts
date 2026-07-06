@@ -234,6 +234,7 @@ export const api = {
   },
   tasks: {
     list: (workspaceId: number) => request<TaskDto[]>(`/api/workspaces/${workspaceId}/tasks`),
+    get: (workspaceId: number, id: number) => request<TaskDto>(`/api/workspaces/${workspaceId}/tasks/${id}`),
     create: (workspaceId: number) => request<TaskDto>(`/api/workspaces/${workspaceId}/tasks`, { method: 'POST' }),
     start: (workspaceId: number, id: number) => request<TaskDto>(`/api/workspaces/${workspaceId}/tasks/${id}/start`, { method: 'POST' }),
     complete: (workspaceId: number, id: number, log: string) => request<TaskDto>(`/api/workspaces/${workspaceId}/tasks/${id}/complete`, { method: 'POST', body: log }),

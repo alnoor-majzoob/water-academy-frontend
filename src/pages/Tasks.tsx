@@ -63,6 +63,38 @@ export function Tasks() {
     void loadTasks();
   }, [activeWorkspace]);
 
+  useEffect(() => {
+    const activeIds = tasks
+      .filter(t => t.status === 'Pending' || t.status === 'Running')
+      .map(t => t.id);
+    if (!activeIds.length || !activeWorkspace) return;
+
+    const poll = async () => {
+      for (const taskId of activeIds) {
+        try {
+          const dto = await api.tasks.get(activeWorkspace, taskId);
+          const updated = mapTask(dto);
+          setTasks(prev => prev.map(t => t.id === taskId ? updated : t));
+        } catch { /* ignore transient errors */ }
+      }
+    };
+
+    let step = 0;
+    let timer: number;
+
+    const schedule = () => {
+      const delay = step < 5 ? (step + 1) * 1000 : 5000;
+      step++;
+      timer = window.setTimeout(async () => {
+        await poll();
+        schedule();
+      }, delay);
+    };
+
+    schedule();
+    return () => clearTimeout(timer);
+  }, [tasks, activeWorkspace]);
+
   const startTask = async (id: number) => {
     if (!activeWorkspace) return;
     try {
