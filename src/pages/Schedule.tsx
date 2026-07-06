@@ -8,28 +8,15 @@ import { api, scheduleStatusLabel, uiToScheduleStatus, type CourseDto, type Sche
 type ViewType = 'calendar' | 'table' | 'kanban';
 type UiStatus = 'Scheduled' | 'Confirmed' | 'Completed' | 'Conflict';
 
-interface UiScheduleEntry {
-  id: number;
-  courseId: number;
-  courseName: string;
-  courseNameEn: string;
-  trainerId: number;
-  trainerName: string;
-  venueId: number;
-  venueName: string;
-  city: string;
-  startDate: string;
-  endDate: string;
-  status: UiStatus;
-  hasConflict: boolean;
-  notes: string;
-}
-
-const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-
 export function Schedule() {
   const { lang, theme, addToast, activeWorkspace } = useApp();
   const isDark = theme === 'dark';
+
+  const months = useMemo(() =>
+    lang === 'ar'
+      ? ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']
+      : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+  [lang]);
   const [view, setView] = useState<ViewType>('table');
   const [entries, setEntries] = useState<UiScheduleEntry[]>([]);
   const [courses, setCourses] = useState<CourseDto[]>([]);
@@ -224,7 +211,9 @@ export function Schedule() {
       <div className={`${card} p-4 flex flex-wrap gap-3`}>
         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>
           <option value="">{t('كل الحالات', 'All Statuses', lang)}</option>
-          {['Scheduled','Confirmed','Completed','Conflict'].map((s) => <option key={s} value={s}>{s}</option>)}
+          {['Scheduled','Confirmed','Completed','Conflict'].map((s) => (
+            <option key={s} value={s}>{t({ Scheduled: 'مجدول', Confirmed: 'مؤكد', Completed: 'منتهي', Conflict: 'تعارض' }[s], s, lang)}</option>
+          ))}
         </select>
         <select value={filterCity} onChange={(e) => setFilterCity(e.target.value)} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>
           <option value="">{t('كل المدن', 'All Cities', lang)}</option>
