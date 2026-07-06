@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp, t } from '../context/AppContext';
-import { Plus, Calendar, List, LayoutGrid, Filter, AlertTriangle, X, Check, Lock } from 'lucide-react';
+import { Plus, Calendar, List, LayoutGrid, Filter, AlertTriangle, X, Check, Lock, Trash2 } from 'lucide-react';
 import { StatusChip } from '../components/ui/StatusChip';
 import { Modal } from '../components/ui/Modal';
 import { api, scheduleStatusLabel, uiToScheduleStatus, type CourseDto, type ScheduleEntryDto, type TrainerDto, type VenueDto } from '../lib/api';
@@ -45,6 +45,7 @@ export function Schedule() {
   const [statusUpdating, setStatusUpdating] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({ courseId: '', trainerId: '', venueId: '', startDate: '', endDate: '', notes: '' });
   const [pendingPayload, setPendingPayload] = useState<typeof form | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
   const card = `rounded-2xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} shadow-sm`;
   const inputCls = `w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-800'}`;
@@ -176,6 +177,23 @@ export function Schedule() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!activeWorkspace || pendingDeleteId === null) return;
+    const id = pendingDeleteId;
+    setPendingDeleteId(null);
+
+    const deletedEntry = entries.find(e => e.id === id);
+    setEntries(prev => prev.filter(e => e.id !== id));
+
+    try {
+      await api.scheduleEntries.delete(activeWorkspace, id);
+      addToast('success', t('تم حذف المدخل', 'Entry deleted', lang));
+    } catch (error) {
+      if (deletedEntry) setEntries(prev => [...prev, deletedEntry]);
+      addToast('error', error instanceof Error ? error.message : 'Delete failed');
+    }
+  };
+
   const kanbanStatuses: UiStatus[] = ['Scheduled', 'Confirmed', 'Completed', 'Conflict'];
 
   const currentMonthIndex = filterMonth ? Number(filterMonth) : new Date().getMonth();
@@ -266,6 +284,7 @@ export function Schedule() {
                         {entry.status === 'Scheduled' && <button onClick={() => void changeStatus(entry.id, 'Confirmed')} disabled={statusUpdating.has(entry.id)} title={t('تأكيد', 'Confirm', lang)} className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed">{statusUpdating.has(entry.id) ? <div className="w-3 h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin" /> : <Check size={13} />}</button>}
                         {entry.status === 'Confirmed' && <button onClick={() => void changeStatus(entry.id, 'Completed')} disabled={statusUpdating.has(entry.id)} title={t('إتمام', 'Complete', lang)} className="p-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed">{statusUpdating.has(entry.id) ? <div className="w-3 h-3 border-2 border-slate-600 border-t-transparent rounded-full animate-spin" /> : <Check size={13} />}</button>}
                         <button onClick={() => void changeStatus(entry.id, 'Confirmed')} disabled={statusUpdating.has(entry.id)} title={t('قفل', 'Lock', lang)} className={`p-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed ${isDark ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-400 hover:bg-slate-100'}`}><Lock size={13} /></button>
+                        <button onClick={() => setPendingDeleteId(entry.id)} title={t('حذف', 'Delete', lang)} className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50"><Trash2 size={13} /></button>
                       </div>
                     </td>
                   </tr>
@@ -290,6 +309,7 @@ export function Schedule() {
                       <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{entry.trainerName}</p>
                       <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{entry.startDate}</p>
                       {entry.hasConflict && <div className="mt-2 flex items-center gap-1 text-xs text-red-500"><AlertTriangle size={11} /> {t('تعارض', 'Conflict', lang)}</div>}
+                      <button onClick={() => setPendingDeleteId(entry.id)} className="mt-2 flex items-center gap-1 text-xs text-red-400 hover:text-red-600"><Trash2 size={11} /> {t('حذف', 'Delete', lang)}</button>
                     </div>
                   ))}
                   {col.length === 0 && <div className={`text-center py-6 text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t('لا مدخلات', 'No entries', lang)}</div>}
@@ -317,6 +337,13 @@ export function Schedule() {
         <h3 className={`text-center font-bold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>{t('تحذير: تعارض!', 'Warning: Conflict!', lang)}</h3>
         <p className={`text-center text-sm mb-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t('هناك تعارض مع مدرب أو قاعة في نفس الفترة. هل تريد الحفظ مع التعارض؟', 'There is a trainer or venue conflict in the same period. Save with conflict anyway?', lang)}</p>
         <div className="flex gap-3"><button onClick={() => pendingPayload && void persistEntry(pendingPayload)} disabled={saving} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${saving ? 'bg-red-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'} text-white`}>{saving ? t('جاري الحفظ...', 'Saving...', lang) : t('حفظ مع التعارض', 'Save with Conflict', lang)}</button><button onClick={() => setShowConflictWarning(false)} className={`flex-1 py-2.5 rounded-xl text-sm border ${isDark ? 'border-slate-600 text-slate-300' : 'border-slate-200 text-slate-600'}`}>{t('مراجعة', 'Review', lang)}</button></div>
+      </Modal>
+
+      <Modal open={pendingDeleteId !== null} onClose={() => setPendingDeleteId(null)} maxWidth="max-w-sm">
+        <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4"><AlertTriangle size={24} className="text-red-600" /></div>
+        <h3 className={`text-center font-bold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>{t('حذف المدخل', 'Delete Entry', lang)}</h3>
+        <p className={`text-center text-sm mb-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t('هل أنت متأكد من حذف هذا المدخل؟ لا يمكن التراجع عن هذا الإجراء.', 'Are you sure you want to delete this entry? This action cannot be undone.', lang)}</p>
+        <div className="flex gap-3"><button onClick={() => void handleDelete()} className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-red-600 hover:bg-red-700 text-white">{t('حذف', 'Delete', lang)}</button><button onClick={() => setPendingDeleteId(null)} className={`flex-1 py-2.5 rounded-xl text-sm border ${isDark ? 'border-slate-600 text-slate-300' : 'border-slate-200 text-slate-600'}`}>{t('إلغاء', 'Cancel', lang)}</button></div>
       </Modal>
     </div>
   );
