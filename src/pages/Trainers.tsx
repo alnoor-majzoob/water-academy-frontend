@@ -174,6 +174,12 @@ export function Trainers() {
         <div className="flex items-center justify-center min-h-[300px]">
           <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
         </div>
+      ) : filtered.length === 0 ? (
+        <div className={`text-center py-16 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+          {trainers.length === 0
+            ? t('لا يوجد مدربين بعد. أضف مدرب جديد', 'No trainers yet. Add a new trainer.', lang)
+            : t('لا يوجد مدربين يطابقون الفلتر', 'No trainers match the current filters', lang)}
+        </div>
       ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filtered.map((trainer) => {
