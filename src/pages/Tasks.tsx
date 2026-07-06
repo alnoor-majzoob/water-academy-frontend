@@ -20,24 +20,10 @@ export function Tasks() {
   const { lang, theme, addToast, activeWorkspace, currentWorkspace } = useApp();
   const isDark = theme === 'dark';
 
-  const formatRelative = (iso: string) => {
-    const diffMs = Date.now() - new Date(iso).getTime();
-    const diffMin = Math.floor(diffMs / 60000);
-    const diffHour = Math.floor(diffMin / 60);
-    const diffDay = Math.floor(diffHour / 24);
-
-    if (diffDay >= 1) {
-      return new Date(iso).toLocaleString(lang === 'ar' ? 'ar-SA' : 'en-US', {
-        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-      });
-    }
-
-    const rtf = new Intl.RelativeTimeFormat(lang === 'ar' ? 'ar-SA' : 'en', { numeric: 'auto' });
-
-    if (diffHour >= 1) return rtf.format(-diffHour, 'hour');
-    if (diffMin >= 1) return rtf.format(-diffMin, 'minute');
-    return rtf.format(0, 'second');
-  };
+  const formatDt = (iso: string) =>
+    new Date(iso).toLocaleString(lang === 'ar' ? 'ar-SA' : 'en-US', {
+      year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
   const mapTask = (task: TaskDto): UiTask => ({
     id: task.id,
     workspace: task.workspaceId,
@@ -196,7 +182,7 @@ export function Tasks() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1"><h3 className={`font-bold text-sm ${isDark ? 'text-white' : 'text-slate-800'}`}>{task.type}</h3><span className={`text-xs font-mono px-1.5 py-0.5 rounded ${isDark ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>#{String(task.id).slice(0, 8)}</span></div>
                       <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{currentWorkspace?.name || task.workspace}</p>
-                      {(task.startedAt || task.completedAt) && <p className={`text-xs mt-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{task.startedAt && `${t('بدء:', 'Started:', lang)} ${formatRelative(task.startedAt)}`} {task.completedAt && `· ${t('انتهاء:', 'Completed:', lang)} ${formatRelative(task.completedAt)}`}</p>}
+                      {(task.startedAt || task.completedAt) && <p className={`text-xs mt-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{task.startedAt && `${t('بدء:', 'Started:', lang)} ${formatDt(task.startedAt)}`} {task.completedAt && `· ${t('انتهاء:', 'Completed:', lang)} ${formatDt(task.completedAt)}`}</p>}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
