@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp, t } from '../context/AppContext';
-import { Play, ChevronDown, ChevronUp, RefreshCw, Plus, CalendarRange } from 'lucide-react';
+import { Play, ChevronDown, ChevronUp, RefreshCw, Plus, CalendarRange, Clock, Loader, CheckCircle, XCircle } from 'lucide-react';
 import { StatusChip } from '../components/ui/StatusChip';
 import { Modal } from '../components/ui/Modal';
 import { api, taskStatusLabel, type TaskDto } from '../lib/api';
@@ -93,7 +93,19 @@ export function Tasks() {
 
   const handleSchedule = (mode: 'new' | 'update') => () => void runScheduler(mode);
 
-  const statusIcon: Record<UiTask['status'], string> = { Pending: '⏳', Running: '⚡', Completed: '✅', Failed: '❌' };
+  const statusIcon = useMemo(() => ({
+    Pending: Clock,
+    Running: Loader,
+    Completed: CheckCircle,
+    Failed: XCircle,
+  }), []);
+
+  const statusColors = {
+    Pending:   { border: 'border-t-yellow-400', bg: 'bg-yellow-100/50 dark:bg-yellow-900/20', iconBg: 'bg-yellow-100 dark:bg-yellow-900/40', iconColor: 'text-yellow-600 dark:text-yellow-400' },
+    Running:   { border: 'border-t-blue-400',   bg: 'bg-blue-100/50 dark:bg-blue-900/20',   iconBg: 'bg-blue-100 dark:bg-blue-900/40',   iconColor: 'text-blue-600 dark:text-blue-400' },
+    Completed: { border: 'border-t-green-400',  bg: 'bg-green-100/50 dark:bg-green-900/20', iconBg: 'bg-green-100 dark:bg-green-900/40', iconColor: 'text-green-600 dark:text-green-400' },
+    Failed:    { border: 'border-t-red-400',    bg: 'bg-red-100/50 dark:bg-red-900/20',     iconBg: 'bg-red-100 dark:bg-red-900/40',     iconColor: 'text-red-600 dark:text-red-400' },
+  };
 
   const counts = useMemo(() => ({
     Pending: tasks.filter((t) => t.status === 'Pending').length,
@@ -116,11 +128,29 @@ export function Tasks() {
       </div>
 
       <div className="grid grid-cols-4 gap-4">
-        {(['Pending', 'Running', 'Completed', 'Failed'] as UiTask['status'][]).map((status) => (
-          <div key={status} className={`${card} p-4`}>
-            <div className="flex items-center gap-2"><span className="text-xl">{statusIcon[status]}</span><div><div className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{counts[status]}</div><StatusChip status={status} size="sm" /></div></div>
-          </div>
-        ))}
+        {(['Pending', 'Running', 'Completed', 'Failed'] as UiTask['status'][]).map((status) => {
+          const Icon = statusIcon[status];
+          const c = statusColors[status];
+          const total = counts.Pending + counts.Running + counts.Completed + counts.Failed;
+          const pct = total > 0 ? Math.round((counts[status] / total) * 100) : 0;
+          return (
+            <div key={status}
+              className={`${card} p-4 border-t-4 ${c.border} ${c.bg} hover:shadow-md hover:-translate-y-0.5 transition-all duration-200`}>
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${c.iconBg} ${c.iconColor}`}>
+                  <Icon size={20} />
+                </div>
+                <div>
+                  <div className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{counts[status]}</div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <StatusChip status={status} size="sm" />
+                    <span className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{pct}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <div className="space-y-3">
