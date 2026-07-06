@@ -16,17 +16,6 @@ type UiTask = {
   progress: number;
 };
 
-const mapTask = (task: TaskDto): UiTask => ({
-  id: task.id,
-  workspace: task.workspaceId,
-  type: 'Workspace Task',
-  status: taskStatusLabel(task.status),
-  startedAt: task.startedAt || '',
-  completedAt: task.completedAt || undefined,
-  log: task.log ? task.log.split('\n').filter(Boolean) : [],
-  progress: task.status === 'COMPLETED' ? 100 : task.status === 'RUNNING' ? 50 : 0,
-});
-
 export function Tasks() {
   const { lang, theme, addToast, activeWorkspace, currentWorkspace } = useApp();
   const isDark = theme === 'dark';
@@ -35,6 +24,20 @@ export function Tasks() {
     new Date(iso).toLocaleString(lang === 'ar' ? 'ar-SA' : 'en-US', {
       year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
     });
+  const mapTask = (task: TaskDto): UiTask => ({
+    id: task.id,
+    workspace: task.workspaceId,
+    type: task.type === 'NEW_SCHEDULE'
+      ? t('جدولة جديدة', 'New Schedule', lang)
+      : task.type === 'UPDATE_SCHEDULE'
+        ? t('تحديث جدولة', 'Schedule Update', lang)
+        : t('مهمة جدولة', 'Scheduling Task', lang),
+    status: taskStatusLabel(task.status),
+    startedAt: task.startedAt || '',
+    completedAt: task.completedAt || undefined,
+    log: task.log ? task.log.split('\n').filter(Boolean) : [],
+    progress: task.status === 'COMPLETED' ? 100 : task.status === 'RUNNING' ? 50 : 0,
+  });
   const [tasks, setTasks] = useState<UiTask[]>([]);
   const [expandedTask, setExpandedTask] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);

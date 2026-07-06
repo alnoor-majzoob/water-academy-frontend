@@ -109,6 +109,7 @@ export interface TaskDto {
   id: number;
   workspaceId: number;
   status: TaskStatus;
+  type: string | null;
   startedAt: string | null;
   completedAt: string | null;
   log: string | null;
