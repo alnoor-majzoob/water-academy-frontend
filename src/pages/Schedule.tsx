@@ -42,6 +42,7 @@ export function Schedule() {
   const [filterMonth, setFilterMonth] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({ courseId: '', trainerId: '', venueId: '', startDate: '', endDate: '', notes: '' });
   const [pendingPayload, setPendingPayload] = useState<typeof form | null>(null);
 
@@ -152,13 +153,20 @@ export function Schedule() {
   };
 
   const changeStatus = async (id: number, status: 'Scheduled' | 'Confirmed' | 'Completed') => {
-    if (!activeWorkspace) return;
+    if (!activeWorkspace || statusUpdating.has(id)) return;
+    setStatusUpdating(prev => new Set(prev).add(id));
     try {
       await api.scheduleEntries.updateStatus(activeWorkspace, id, uiToScheduleStatus(status));
       addToast('success', t('تم تحديث الحالة', 'Status updated', lang));
       await loadData();
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Status update failed');
+    } finally {
+      setStatusUpdating(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   };
 
@@ -249,9 +257,9 @@ export function Schedule() {
                     <td className="px-4 py-3"><StatusChip status={entry.status} size="sm" /></td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        {entry.status === 'Scheduled' && <button onClick={() => void changeStatus(entry.id, 'Confirmed')} title={t('تأكيد', 'Confirm', lang)} className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100"><Check size={13} /></button>}
-                        {entry.status === 'Confirmed' && <button onClick={() => void changeStatus(entry.id, 'Completed')} title={t('إتمام', 'Complete', lang)} className="p-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200"><Check size={13} /></button>}
-                        <button onClick={() => void changeStatus(entry.id, 'Confirmed')} title={t('قفل', 'Lock', lang)} className={`p-1.5 rounded-lg ${isDark ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-400 hover:bg-slate-100'}`}><Lock size={13} /></button>
+                        {entry.status === 'Scheduled' && <button onClick={() => void changeStatus(entry.id, 'Confirmed')} disabled={statusUpdating.has(entry.id)} title={t('تأكيد', 'Confirm', lang)} className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed">{statusUpdating.has(entry.id) ? <div className="w-3 h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin" /> : <Check size={13} />}</button>}
+                        {entry.status === 'Confirmed' && <button onClick={() => void changeStatus(entry.id, 'Completed')} disabled={statusUpdating.has(entry.id)} title={t('إتمام', 'Complete', lang)} className="p-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed">{statusUpdating.has(entry.id) ? <div className="w-3 h-3 border-2 border-slate-600 border-t-transparent rounded-full animate-spin" /> : <Check size={13} />}</button>}
+                        <button onClick={() => void changeStatus(entry.id, 'Confirmed')} disabled={statusUpdating.has(entry.id)} title={t('قفل', 'Lock', lang)} className={`p-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed ${isDark ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-400 hover:bg-slate-100'}`}>{statusUpdating.has(entry.id) ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <Lock size={13} />}</button>
                       </div>
                     </td>
                   </tr>
