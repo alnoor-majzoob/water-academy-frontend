@@ -155,11 +155,17 @@ export function Schedule() {
   const changeStatus = async (id: number, status: 'Scheduled' | 'Confirmed' | 'Completed') => {
     if (!activeWorkspace || statusUpdating.has(id)) return;
     setStatusUpdating(prev => new Set(prev).add(id));
+
+    const prevStatus = entries.find(e => e.id === id)?.status as UiStatus | undefined;
+    if (!prevStatus) { setStatusUpdating(prev => { const n = new Set(prev); n.delete(id); return n; }); return; }
+
+    setEntries(prev => prev.map(e => e.id === id ? { ...e, status: status as UiStatus } : e));
+
     try {
       await api.scheduleEntries.updateStatus(activeWorkspace, id, uiToScheduleStatus(status));
       addToast('success', t('تم تحديث الحالة', 'Status updated', lang));
-      await loadData();
     } catch (error) {
+      setEntries(prev => prev.map(e => e.id === id ? { ...e, status: prevStatus } : e));
       addToast('error', error instanceof Error ? error.message : 'Status update failed');
     } finally {
       setStatusUpdating(prev => {
