@@ -175,6 +175,12 @@ export function Venues() {
         <div className="flex items-center justify-center min-h-[300px]">
           <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
         </div>
+      ) : filtered.length === 0 ? (
+        <div className={`text-center py-16 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+          {venues.length === 0
+            ? t('لا توجد قاعات بعد. اضف قاعة جديدة', 'No venues yet. Add a new venue.', lang)
+            : t('لا توجد قاعات تطابق الفلتر', 'No venues match the current filters', lang)}
+        </div>
       ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filtered.map((venue) => (
