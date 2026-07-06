@@ -176,7 +176,7 @@ export function Tasks() {
               <div className="p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-4 flex-1">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`}>{(() => { const Icon = statusIcon[task.status]; return <Icon size={20} />; })()}</div>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`}>{statusIcon[task.status]}</div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1"><h3 className={`font-bold text-sm ${isDark ? 'text-white' : 'text-slate-800'}`}>{task.type}</h3><span className={`text-xs font-mono px-1.5 py-0.5 rounded ${isDark ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>#{String(task.id).slice(0, 8)}</span></div>
                       <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{currentWorkspace?.name || task.workspace}</p>
