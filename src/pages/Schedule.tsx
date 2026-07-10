@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp, t } from '../context/AppContext';
-import { Plus, Calendar, List, LayoutGrid, Filter, AlertTriangle, X, Check, Lock, Trash2 } from 'lucide-react';
+import { Plus, CalendarRange, List, LayoutGrid, Filter, AlertTriangle, X, Check, Lock, Trash2, type LucideIcon } from 'lucide-react';
 import { StatusChip } from '../components/ui/StatusChip';
 import { Modal } from '../components/ui/Modal';
 import { api, scheduleStatusLabel, uiToScheduleStatus, type CourseDto, type ScheduleEntryDto, type TrainerDto, type VenueDto } from '../lib/api';
 import { Pagination } from '../components/ui/Pagination';
 import { usePagination } from '../hooks/usePagination';
 
-type ViewType = 'calendar' | 'table' | 'kanban';
+type ViewType = 'gantt' | 'table' | 'kanban';
 type UiStatus = 'Scheduled' | 'Confirmed' | 'Completed' | 'Conflict';
 
 export function Schedule() {
@@ -120,7 +120,7 @@ export function Schedule() {
   const filtered = useMemo(() => entries.filter((e) =>
     (!filterStatus || e.status === filterStatus) &&
     (!filterCity || e.city === filterCity) &&
-    (!filterMonth || new Date(e.startDate).getMonth() === +filterMonth)
+    (filterMonth === '' || new Date(e.startDate).getMonth() === Number(filterMonth))
   ), [entries, filterCity, filterMonth, filterStatus]);
 
   const cities = [...new Set(entries.map((e) => e.city).filter(Boolean))];
@@ -224,13 +224,31 @@ export function Schedule() {
 
   const kanbanStatuses: UiStatus[] = ['Scheduled', 'Confirmed', 'Completed', 'Conflict'];
 
-  const currentMonthIndex = filterMonth ? Number(filterMonth) : new Date().getMonth();
-  const daysInMonth = 31;
-  const calendarDays = Array.from({ length: daysInMonth }, (_, i) => {
-    const day = i + 1;
-    const entry = entries.find((e) => new Date(e.startDate).getDate() === day && new Date(e.startDate).getMonth() === currentMonthIndex);
-    return { day, entry };
-  });
+  const ganttMonthIndex = filterMonth !== '' ? Number(filterMonth) : new Date().getMonth();
+  const ganttYear = currentWorkspace?.year || new Date().getFullYear();
+  const ganttDaysInMonth = new Date(ganttYear, ganttMonthIndex + 1, 0).getDate();
+  const ganttDays = Array.from({ length: ganttDaysInMonth }, (_, i) => i + 1);
+  const ganttGridColumns = `repeat(${ganttDaysInMonth}, minmax(44px, 1fr))`;
+  const ganttMinWidth = `${ganttDaysInMonth * 44}px`;
+  const ganttMonthStart = new Date(ganttYear, ganttMonthIndex, 1);
+  const ganttMonthEnd = new Date(ganttYear, ganttMonthIndex, ganttDaysInMonth);
+
+  const getGanttBar = (entry: UiScheduleEntry) => {
+    const start = new Date(entry.startDate);
+    const end = new Date(entry.endDate);
+    const visibleStart = start < ganttMonthStart ? ganttMonthStart : start;
+    const visibleEnd = end > ganttMonthEnd ? ganttMonthEnd : end;
+    const startDay = visibleStart.getDate();
+    const duration = Math.max(1, visibleEnd.getDate() - startDay + 1);
+    return { startDay, duration };
+  };
+
+  const ganttBarClass = (entry: UiScheduleEntry) => {
+    if (entry.hasConflict || entry.status === 'Conflict') return 'bg-red-500 text-white shadow-red-500/20';
+    if (entry.status === 'Confirmed') return 'bg-emerald-500 text-white shadow-emerald-500/20';
+    if (entry.status === 'Completed') return isDark ? 'bg-slate-600 text-slate-100 shadow-slate-900/30' : 'bg-slate-500 text-white shadow-slate-500/20';
+    return 'bg-blue-600 text-white shadow-blue-500/20';
+  };
 
   return (
     <div className="p-6 space-y-5 overflow-y-auto h-full">
@@ -241,7 +259,7 @@ export function Schedule() {
         </div>
         <div className="flex items-center gap-2">
           <div className={`flex rounded-xl border p-1 gap-0.5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white'}`}>
-            {([['calendar', Calendar], ['table', List], ['kanban', LayoutGrid]] as [ViewType, typeof Calendar][]).map(([v, Icon]) => (
+            {([['gantt', CalendarRange], ['table', List], ['kanban', LayoutGrid]] as [ViewType, LucideIcon][]).map(([v, Icon]) => (
               <button key={v} onClick={() => setView(v)} className={`p-2 rounded-lg transition-colors ${view === v ? 'bg-blue-600 text-white' : (isDark ? 'text-slate-400' : 'text-slate-500')}`}><Icon size={16} /></button>
             ))}
           </div>
@@ -273,20 +291,70 @@ export function Schedule() {
         </div>
       ) : (
       <>
-      {view === 'calendar' && (
-        <div className={`${card} p-5`}>
-          <h3 className={`font-semibold mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>{months[currentMonthIndex]}</h3>
-          <div className="grid grid-cols-7 gap-2 mb-2">
-            {(lang === 'ar' ? ['أح','إث','ثل','أر','خم','جم','سب'] : ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']).map((d) => <div key={d} className={`text-center text-xs font-semibold py-2 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{d}</div>)}
+      {view === 'gantt' && (
+        <div className={`${card} overflow-hidden`}>
+          <div className={`flex items-center justify-between gap-3 px-5 py-4 border-b ${isDark ? 'border-slate-700' : 'border-slate-100'}`}>
+            <div>
+              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{t('مخطط جانت', 'Gantt Chart', lang)}</h3>
+              <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{months[ganttMonthIndex]} {ganttYear}</p>
+            </div>
+            <div className="flex items-center gap-3 text-xs">
+              {[
+                ['bg-blue-600', t('مجدول', 'Scheduled', lang)],
+                ['bg-emerald-500', t('مؤكد', 'Confirmed', lang)],
+                ['bg-slate-500', t('منتهي', 'Completed', lang)],
+                ['bg-red-500', t('تعارض', 'Conflict', lang)],
+              ].map(([color, label]) => <span key={label} className={`flex items-center gap-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}><span className={`w-2.5 h-2.5 rounded-full ${color}`} />{label}</span>)}
+            </div>
           </div>
-          <div className="grid grid-cols-7 gap-2">
-            {calendarDays.map(({ day, entry }) => (
-              <div key={day} className={`min-h-[80px] rounded-xl p-2 border calendar-day cursor-pointer ${entry ? (isDark ? 'border-blue-500/50 bg-blue-900/20' : 'border-blue-200 bg-blue-50') : (isDark ? 'border-slate-700 bg-slate-800/50 hover:border-slate-600' : 'border-slate-100 bg-white hover:border-slate-200')}`}>
-                <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{day}</span>
-                {entry && <div className={`mt-1 text-xs p-1 rounded-lg font-medium leading-tight ${entry.status === 'Conflict' ? 'bg-red-100 text-red-700' : entry.status === 'Confirmed' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>{lang === 'ar' ? entry.courseName.slice(0, 12) : entry.courseNameEn.slice(0, 12)}...</div>}
+          {filtered.length === 0 ? (
+            <div className={`p-12 text-center text-sm ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t('لا توجد مدخلات تطابق الفلتر', 'No entries match the current filters', lang)}</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <div className="min-w-[920px]">
+                <div className={`grid border-b ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-slate-100 bg-slate-50'}`} style={{ gridTemplateColumns: '280px 1fr' }}>
+                  <div className={`px-4 py-3 text-xs font-semibold uppercase ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t('الدورة', 'Course', lang)}</div>
+                  <div className="overflow-hidden">
+                    <div className="grid" style={{ gridTemplateColumns: ganttGridColumns, minWidth: ganttMinWidth }}>
+                      {ganttDays.map((day) => <div key={day} className={`py-3 text-center text-[11px] font-semibold border-s ${isDark ? 'border-slate-800 text-slate-500' : 'border-slate-200 text-slate-500'}`}>{day}</div>)}
+                    </div>
+                  </div>
+                </div>
+                <div className={isDark ? 'divide-y divide-slate-700/70' : 'divide-y divide-slate-100'}>
+                  {filtered.map((entry) => {
+                    const bar = getGanttBar(entry);
+                    return (
+                      <div key={entry.id} className="grid min-h-[72px]" style={{ gridTemplateColumns: '280px 1fr' }}>
+                        <div className={`px-4 py-3 ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
+                          <div className="flex items-start gap-2">
+                            {entry.hasConflict && <AlertTriangle size={14} className="mt-0.5 text-red-500 flex-shrink-0" />}
+                            <div className="min-w-0">
+                              <p className={`truncate text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>{lang === 'ar' ? entry.courseName : entry.courseNameEn}</p>
+                              <p className={`truncate text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{entry.trainerName} · {entry.venueName || '-'}</p>
+                              <p className={`text-[11px] mt-1 font-mono ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{entry.startDate} → {entry.endDate}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="overflow-hidden py-4 pe-4">
+                          <div className="grid relative h-10" style={{ gridTemplateColumns: ganttGridColumns, minWidth: ganttMinWidth }}>
+                            {ganttDays.map((day) => <div key={day} className={`border-s ${isDark ? 'border-slate-800' : 'border-slate-100'}`} />)}
+                            <div
+                              className={`row-start-1 h-9 rounded-xl px-3 flex items-center gap-2 text-xs font-semibold shadow-lg ${ganttBarClass(entry)}`}
+                              style={{ gridColumn: `${bar.startDay} / span ${bar.duration}` }}
+                              title={`${entry.courseName}: ${entry.startDate} - ${entry.endDate}`}
+                            >
+                              {entry.hasConflict && <AlertTriangle size={12} className="flex-shrink-0" />}
+                              <span className="truncate">{entry.courseName}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       )}
 
