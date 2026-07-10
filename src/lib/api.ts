@@ -1,4 +1,18 @@
+import { cachedRequest, clearApiCache, invalidateCache, type CacheOptions } from './apiCache';
+
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+
+const TTL = {
+  dashboard: 30_000,
+  workspaceList: 60_000,
+  list: 30_000,
+  listAll: 60_000,
+  filterOptions: 300_000,
+  calendar: 60_000,
+  assignments: 30_000,
+} as const;
+
+type ApiRequestInit = Omit<RequestInit, 'cache'> & { cache?: CacheOptions };
 
 export type WorkspaceStatus = 'DRAFT' | 'IMPORTED' | 'OPTIMIZED' | 'DISABLED';
 export type CourseType = 'IN_PERSON' | 'ONLINE' | 'EXTERNAL';
@@ -208,13 +222,17 @@ export interface DashboardDto {
   }[];
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T>(path: string, init?: ApiRequestInit): Promise<T> {
+  const { cache, ...fetchInit } = init || {};
+  const method = (fetchInit.method || 'GET').toUpperCase();
+  const canCache = method === 'GET' && cache && cache.ttlMs && !(fetchInit.body instanceof FormData);
+  const fetcher = async () => {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
-      ...(init?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
-      ...(init?.headers || {}),
+        ...(fetchInit.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+        ...(fetchInit.headers || {}),
     },
-    ...init,
+      ...fetchInit,
   });
 
   if (!response.ok) {
@@ -234,6 +252,52 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+  };
+
+  if (!canCache) return fetcher();
+  return cachedRequest<T>(cache.key || path, cache, fetcher);
+}
+
+function invalidateWorkspace(workspaceId: number) {
+  invalidateCache(`/api/workspaces/${workspaceId}/`);
+}
+
+function invalidateDashboard(workspaceId: number) {
+  invalidateCache(`/api/workspaces/${workspaceId}/dashboard`);
+}
+
+function invalidateCourses(workspaceId: number) {
+  invalidateCache(`/api/workspaces/${workspaceId}/courses`);
+}
+
+function invalidateTrainers(workspaceId: number) {
+  invalidateCache(`/api/workspaces/${workspaceId}/trainers`);
+}
+
+function invalidateVenues(workspaceId: number) {
+  invalidateCache(`/api/workspaces/${workspaceId}/venues`);
+}
+
+function invalidateSchedule(workspaceId: number) {
+  invalidateCache(`/api/workspaces/${workspaceId}/schedule-entries`);
+}
+
+function invalidateAssignments(workspaceId: number) {
+  invalidateCache(`/api/workspaces/${workspaceId}/assignments`);
+}
+
+function invalidateCalendar(workspaceId: number) {
+  invalidateCache(`/api/workspaces/${workspaceId}/calendar-days`);
+}
+
+function invalidateTasks(workspaceId: number) {
+  invalidateCache(`/api/workspaces/${workspaceId}/tasks`);
+}
+
+async function mutate<T>(path: string, init: RequestInit, after?: () => void): Promise<T> {
+  const data = await request<T>(path, init);
+  after?.();
+  return data;
 }
 
 function query(params?: PageParams): string {
@@ -260,78 +324,137 @@ async function download(path: string): Promise<Blob> {
 }
 
 export const api = {
+  cache: {
+    clear: clearApiCache,
+    invalidateWorkspace,
+    invalidateDashboard,
+    invalidateCourses,
+    invalidateTrainers,
+    invalidateVenues,
+    invalidateSchedule,
+    invalidateAssignments,
+    invalidateCalendar,
+    invalidateTasks,
+  },
   dashboard: {
-    get: (workspaceId: number) => request<DashboardDto>(`/api/workspaces/${workspaceId}/dashboard`),
+    get: (workspaceId: number, options?: CacheOptions) =>
+      request<DashboardDto>(`/api/workspaces/${workspaceId}/dashboard`, { cache: { ttlMs: TTL.dashboard, ...options } }),
   },
   workspaces: {
-    list: () => request<WorkspaceDto[]>('/api/workspaces'),
+    list: (options?: CacheOptions) => request<WorkspaceDto[]>('/api/workspaces', { cache: { ttlMs: TTL.workspaceList, ...options } }),
     create: (body: { name: string; description?: string | null; year: number; color?: string | null }) =>
-      request<WorkspaceDto>('/api/workspaces', { method: 'POST', body: JSON.stringify(body) }),
+      mutate<WorkspaceDto>('/api/workspaces', { method: 'POST', body: JSON.stringify(body) }, () => invalidateCache('/api/workspaces')),
     update: (id: number, body: { name: string; description?: string | null; year: number; color?: string | null }) =>
-      request<WorkspaceDto>(`/api/workspaces/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+      mutate<WorkspaceDto>(`/api/workspaces/${id}`, { method: 'PUT', body: JSON.stringify(body) }, () => invalidateCache('/api/workspaces')),
     updateStatus: (id: number, status: WorkspaceStatus) =>
-      request<WorkspaceDto>(`/api/workspaces/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
-    delete: (id: number) => request<void>(`/api/workspaces/${id}`, { method: 'DELETE' }),
+      mutate<WorkspaceDto>(`/api/workspaces/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }, () => invalidateCache('/api/workspaces')),
+    delete: (id: number) => mutate<void>(`/api/workspaces/${id}`, { method: 'DELETE' }, () => invalidateCache('/api/workspaces')),
   },
   courses: {
-    list: (workspaceId: number, params?: PageParams) => request<PageResponse<CourseDto>>(`/api/workspaces/${workspaceId}/courses${query(params)}`),
-    listAll: (workspaceId: number) => request<CourseDto[]>(`/api/workspaces/${workspaceId}/courses/all`),
-    filterOptions: (workspaceId: number) => request<CourseFilterOptionsDto>(`/api/workspaces/${workspaceId}/courses/filter-options`),
+    list: (workspaceId: number, params?: PageParams, options?: CacheOptions) =>
+      request<PageResponse<CourseDto>>(`/api/workspaces/${workspaceId}/courses${query(params)}`, { cache: { ttlMs: TTL.list, ...options } }),
+    listAll: (workspaceId: number, options?: CacheOptions) =>
+      request<CourseDto[]>(`/api/workspaces/${workspaceId}/courses/all`, { cache: { ttlMs: TTL.listAll, ...options } }),
+    filterOptions: (workspaceId: number, options?: CacheOptions) =>
+      request<CourseFilterOptionsDto>(`/api/workspaces/${workspaceId}/courses/filter-options`, { cache: { ttlMs: TTL.filterOptions, ...options } }),
     create: (workspaceId: number, body: Record<string, unknown>) =>
-      request<CourseDto>(`/api/workspaces/${workspaceId}/courses`, { method: 'POST', body: JSON.stringify(body) }),
+      mutate<CourseDto>(`/api/workspaces/${workspaceId}/courses`, { method: 'POST', body: JSON.stringify(body) }, () => {
+        invalidateCourses(workspaceId); invalidateDashboard(workspaceId); invalidateAssignments(workspaceId); invalidateSchedule(workspaceId);
+      }),
     update: (workspaceId: number, id: number, body: Record<string, unknown>) =>
-      request<CourseDto>(`/api/workspaces/${workspaceId}/courses/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-    delete: (workspaceId: number, id: number) => request<void>(`/api/workspaces/${workspaceId}/courses/${id}`, { method: 'DELETE' }),
+      mutate<CourseDto>(`/api/workspaces/${workspaceId}/courses/${id}`, { method: 'PUT', body: JSON.stringify(body) }, () => {
+        invalidateCourses(workspaceId); invalidateDashboard(workspaceId); invalidateAssignments(workspaceId); invalidateSchedule(workspaceId);
+      }),
+    delete: (workspaceId: number, id: number) => mutate<void>(`/api/workspaces/${workspaceId}/courses/${id}`, { method: 'DELETE' }, () => {
+      invalidateCourses(workspaceId); invalidateDashboard(workspaceId); invalidateAssignments(workspaceId); invalidateSchedule(workspaceId);
+    }),
   },
   trainers: {
-    list: (workspaceId: number, params?: PageParams) => request<PageResponse<TrainerDto>>(`/api/workspaces/${workspaceId}/trainers${query(params)}`),
-    listAll: (workspaceId: number) => request<TrainerDto[]>(`/api/workspaces/${workspaceId}/trainers/all`),
-    filterOptions: (workspaceId: number) => request<TrainerFilterOptionsDto>(`/api/workspaces/${workspaceId}/trainers/filter-options`),
+    list: (workspaceId: number, params?: PageParams, options?: CacheOptions) =>
+      request<PageResponse<TrainerDto>>(`/api/workspaces/${workspaceId}/trainers${query(params)}`, { cache: { ttlMs: TTL.list, ...options } }),
+    listAll: (workspaceId: number, options?: CacheOptions) =>
+      request<TrainerDto[]>(`/api/workspaces/${workspaceId}/trainers/all`, { cache: { ttlMs: TTL.listAll, ...options } }),
+    filterOptions: (workspaceId: number, options?: CacheOptions) =>
+      request<TrainerFilterOptionsDto>(`/api/workspaces/${workspaceId}/trainers/filter-options`, { cache: { ttlMs: TTL.filterOptions, ...options } }),
     create: (workspaceId: number, body: Record<string, unknown>) =>
-      request<TrainerDto>(`/api/workspaces/${workspaceId}/trainers`, { method: 'POST', body: JSON.stringify(body) }),
+      mutate<TrainerDto>(`/api/workspaces/${workspaceId}/trainers`, { method: 'POST', body: JSON.stringify(body) }, () => {
+        invalidateTrainers(workspaceId); invalidateDashboard(workspaceId); invalidateAssignments(workspaceId); invalidateSchedule(workspaceId);
+      }),
     update: (workspaceId: number, id: number, body: Record<string, unknown>) =>
-      request<TrainerDto>(`/api/workspaces/${workspaceId}/trainers/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-    delete: (workspaceId: number, id: number) => request<void>(`/api/workspaces/${workspaceId}/trainers/${id}`, { method: 'DELETE' }),
+      mutate<TrainerDto>(`/api/workspaces/${workspaceId}/trainers/${id}`, { method: 'PUT', body: JSON.stringify(body) }, () => {
+        invalidateTrainers(workspaceId); invalidateDashboard(workspaceId); invalidateAssignments(workspaceId); invalidateSchedule(workspaceId);
+      }),
+    delete: (workspaceId: number, id: number) => mutate<void>(`/api/workspaces/${workspaceId}/trainers/${id}`, { method: 'DELETE' }, () => {
+      invalidateTrainers(workspaceId); invalidateDashboard(workspaceId); invalidateAssignments(workspaceId); invalidateSchedule(workspaceId);
+    }),
   },
   venues: {
-    list: (workspaceId: number, params?: PageParams) => request<PageResponse<VenueDto>>(`/api/workspaces/${workspaceId}/venues${query(params)}`),
-    listAll: (workspaceId: number) => request<VenueDto[]>(`/api/workspaces/${workspaceId}/venues/all`),
-    filterOptions: (workspaceId: number) => request<VenueFilterOptionsDto>(`/api/workspaces/${workspaceId}/venues/filter-options`),
+    list: (workspaceId: number, params?: PageParams, options?: CacheOptions) =>
+      request<PageResponse<VenueDto>>(`/api/workspaces/${workspaceId}/venues${query(params)}`, { cache: { ttlMs: TTL.list, ...options } }),
+    listAll: (workspaceId: number, options?: CacheOptions) =>
+      request<VenueDto[]>(`/api/workspaces/${workspaceId}/venues/all`, { cache: { ttlMs: TTL.listAll, ...options } }),
+    filterOptions: (workspaceId: number, options?: CacheOptions) =>
+      request<VenueFilterOptionsDto>(`/api/workspaces/${workspaceId}/venues/filter-options`, { cache: { ttlMs: TTL.filterOptions, ...options } }),
     create: (workspaceId: number, body: Record<string, unknown>) =>
-      request<VenueDto>(`/api/workspaces/${workspaceId}/venues`, { method: 'POST', body: JSON.stringify(body) }),
+      mutate<VenueDto>(`/api/workspaces/${workspaceId}/venues`, { method: 'POST', body: JSON.stringify(body) }, () => {
+        invalidateVenues(workspaceId); invalidateDashboard(workspaceId); invalidateSchedule(workspaceId);
+      }),
     update: (workspaceId: number, id: number, body: Record<string, unknown>) =>
-      request<VenueDto>(`/api/workspaces/${workspaceId}/venues/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-    delete: (workspaceId: number, id: number) => request<void>(`/api/workspaces/${workspaceId}/venues/${id}`, { method: 'DELETE' }),
+      mutate<VenueDto>(`/api/workspaces/${workspaceId}/venues/${id}`, { method: 'PUT', body: JSON.stringify(body) }, () => {
+        invalidateVenues(workspaceId); invalidateDashboard(workspaceId); invalidateSchedule(workspaceId);
+      }),
+    delete: (workspaceId: number, id: number) => mutate<void>(`/api/workspaces/${workspaceId}/venues/${id}`, { method: 'DELETE' }, () => {
+      invalidateVenues(workspaceId); invalidateDashboard(workspaceId); invalidateSchedule(workspaceId);
+    }),
   },
   calendarDays: {
-    list: (workspaceId: number, params?: PageParams) => request<PageResponse<CalendarDayDto>>(`/api/workspaces/${workspaceId}/calendar-days${query(params)}`),
-    listAll: (workspaceId: number) => request<CalendarDayDto[]>(`/api/workspaces/${workspaceId}/calendar-days/all`),
+    list: (workspaceId: number, params?: PageParams, options?: CacheOptions) =>
+      request<PageResponse<CalendarDayDto>>(`/api/workspaces/${workspaceId}/calendar-days${query(params)}`, { cache: { ttlMs: TTL.calendar, ...options } }),
+    listAll: (workspaceId: number, options?: CacheOptions) =>
+      request<CalendarDayDto[]>(`/api/workspaces/${workspaceId}/calendar-days/all`, { cache: { ttlMs: TTL.calendar, ...options } }),
     create: (workspaceId: number, body: { date: string; isWorkDay: boolean; isHoliday: boolean }) =>
-      request<CalendarDayDto>(`/api/workspaces/${workspaceId}/calendar-days`, { method: 'POST', body: JSON.stringify(body) }),
+      mutate<CalendarDayDto>(`/api/workspaces/${workspaceId}/calendar-days`, { method: 'POST', body: JSON.stringify(body) }, () => invalidateCalendar(workspaceId)),
     bulkCreate: (workspaceId: number, body: { date: string; isWorkDay: boolean; isHoliday: boolean }[]) =>
-      request<CalendarDayDto[]>(`/api/workspaces/${workspaceId}/calendar-days/bulk`, { method: 'POST', body: JSON.stringify(body) }),
+      mutate<CalendarDayDto[]>(`/api/workspaces/${workspaceId}/calendar-days/bulk`, { method: 'POST', body: JSON.stringify(body) }, () => invalidateCalendar(workspaceId)),
     update: (workspaceId: number, id: number, body: { date: string; isWorkDay: boolean; isHoliday: boolean }) =>
-      request<CalendarDayDto>(`/api/workspaces/${workspaceId}/calendar-days/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-    delete: (workspaceId: number, id: number) => request<void>(`/api/workspaces/${workspaceId}/calendar-days/${id}`, { method: 'DELETE' }),
+      mutate<CalendarDayDto>(`/api/workspaces/${workspaceId}/calendar-days/${id}`, { method: 'PUT', body: JSON.stringify(body) }, () => invalidateCalendar(workspaceId)),
+    delete: (workspaceId: number, id: number) => mutate<void>(`/api/workspaces/${workspaceId}/calendar-days/${id}`, { method: 'DELETE' }, () => invalidateCalendar(workspaceId)),
   },
   assignments: {
-    list: (workspaceId: number, params?: PageParams) => request<PageResponse<AssignmentDto>>(`/api/workspaces/${workspaceId}/assignments${query(params)}`),
-    listAll: (workspaceId: number) => request<AssignmentDto[]>(`/api/workspaces/${workspaceId}/assignments/all`),
+    list: (workspaceId: number, params?: PageParams, options?: CacheOptions) =>
+      request<PageResponse<AssignmentDto>>(`/api/workspaces/${workspaceId}/assignments${query(params)}`, { cache: { ttlMs: TTL.assignments, ...options } }),
+    listAll: (workspaceId: number, options?: CacheOptions) =>
+      request<AssignmentDto[]>(`/api/workspaces/${workspaceId}/assignments/all`, { cache: { ttlMs: TTL.assignments, ...options } }),
     create: (workspaceId: number, body: { trainerId: number; courseId: number }) =>
-      request<AssignmentDto>(`/api/workspaces/${workspaceId}/assignments`, { method: 'POST', body: JSON.stringify(body) }),
-    delete: (workspaceId: number, id: number) => request<void>(`/api/workspaces/${workspaceId}/assignments/${id}`, { method: 'DELETE' }),
+      mutate<AssignmentDto>(`/api/workspaces/${workspaceId}/assignments`, { method: 'POST', body: JSON.stringify(body) }, () => {
+        invalidateAssignments(workspaceId); invalidateDashboard(workspaceId);
+      }),
+    delete: (workspaceId: number, id: number) => mutate<void>(`/api/workspaces/${workspaceId}/assignments/${id}`, { method: 'DELETE' }, () => {
+      invalidateAssignments(workspaceId); invalidateDashboard(workspaceId);
+    }),
   },
   scheduleEntries: {
-    list: (workspaceId: number, params?: PageParams) => request<PageResponse<ScheduleEntryDto>>(`/api/workspaces/${workspaceId}/schedule-entries${query(params)}`),
-    listAll: (workspaceId: number) => request<ScheduleEntryDto[]>(`/api/workspaces/${workspaceId}/schedule-entries/all`),
-    filterOptions: (workspaceId: number) => request<ScheduleEntryFilterOptionsDto>(`/api/workspaces/${workspaceId}/schedule-entries/filter-options`),
+    list: (workspaceId: number, params?: PageParams, options?: CacheOptions) =>
+      request<PageResponse<ScheduleEntryDto>>(`/api/workspaces/${workspaceId}/schedule-entries${query(params)}`, { cache: { ttlMs: TTL.list, ...options } }),
+    listAll: (workspaceId: number, options?: CacheOptions) =>
+      request<ScheduleEntryDto[]>(`/api/workspaces/${workspaceId}/schedule-entries/all`, { cache: { ttlMs: TTL.listAll, ...options } }),
+    filterOptions: (workspaceId: number, options?: CacheOptions) =>
+      request<ScheduleEntryFilterOptionsDto>(`/api/workspaces/${workspaceId}/schedule-entries/filter-options`, { cache: { ttlMs: TTL.filterOptions, ...options } }),
     create: (workspaceId: number, body: Record<string, unknown>) =>
-      request<ScheduleEntryDto>(`/api/workspaces/${workspaceId}/schedule-entries`, { method: 'POST', body: JSON.stringify(body) }),
+      mutate<ScheduleEntryDto>(`/api/workspaces/${workspaceId}/schedule-entries`, { method: 'POST', body: JSON.stringify(body) }, () => {
+        invalidateSchedule(workspaceId); invalidateDashboard(workspaceId); invalidateCourses(workspaceId);
+      }),
     update: (workspaceId: number, id: number, body: Record<string, unknown>) =>
-      request<ScheduleEntryDto>(`/api/workspaces/${workspaceId}/schedule-entries/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+      mutate<ScheduleEntryDto>(`/api/workspaces/${workspaceId}/schedule-entries/${id}`, { method: 'PUT', body: JSON.stringify(body) }, () => {
+        invalidateSchedule(workspaceId); invalidateDashboard(workspaceId); invalidateCourses(workspaceId);
+      }),
     updateStatus: (workspaceId: number, id: number, status: ScheduleStatus) =>
-      request<ScheduleEntryDto>(`/api/workspaces/${workspaceId}/schedule-entries/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
-    delete: (workspaceId: number, id: number) => request<void>(`/api/workspaces/${workspaceId}/schedule-entries/${id}`, { method: 'DELETE' }),
+      mutate<ScheduleEntryDto>(`/api/workspaces/${workspaceId}/schedule-entries/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }, () => {
+        invalidateSchedule(workspaceId); invalidateDashboard(workspaceId);
+      }),
+    delete: (workspaceId: number, id: number) => mutate<void>(`/api/workspaces/${workspaceId}/schedule-entries/${id}`, { method: 'DELETE' }, () => {
+      invalidateSchedule(workspaceId); invalidateDashboard(workspaceId); invalidateCourses(workspaceId);
+    }),
     venueConflicts: (workspaceId: number, venueId: number, startDate: string, endDate: string) =>
       request<ScheduleEntryDto[]>(`/api/workspaces/${workspaceId}/schedule-entries/conflicts/venue?venueId=${encodeURIComponent(venueId)}&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`),
     trainerConflicts: (workspaceId: number, trainerId: number, startDate: string, endDate: string) =>
@@ -340,22 +463,27 @@ export const api = {
   tasks: {
     list: (workspaceId: number, params?: PageParams) => request<PageResponse<TaskDto>>(`/api/workspaces/${workspaceId}/tasks${query(params)}`),
     listAll: (workspaceId: number) => request<TaskDto[]>(`/api/workspaces/${workspaceId}/tasks/all`),
-    filterOptions: (workspaceId: number) => request<TaskFilterOptionsDto>(`/api/workspaces/${workspaceId}/tasks/filter-options`),
+    filterOptions: (workspaceId: number, options?: CacheOptions) =>
+      request<TaskFilterOptionsDto>(`/api/workspaces/${workspaceId}/tasks/filter-options`, { cache: { ttlMs: TTL.filterOptions, ...options } }),
     get: (workspaceId: number, id: number) => request<TaskDto>(`/api/workspaces/${workspaceId}/tasks/${id}`),
-    create: (workspaceId: number) => request<TaskDto>(`/api/workspaces/${workspaceId}/tasks`, { method: 'POST' }),
-    start: (workspaceId: number, id: number) => request<TaskDto>(`/api/workspaces/${workspaceId}/tasks/${id}/start`, { method: 'POST' }),
-    complete: (workspaceId: number, id: number, log: string) => request<TaskDto>(`/api/workspaces/${workspaceId}/tasks/${id}/complete`, { method: 'POST', body: log }),
-    fail: (workspaceId: number, id: number, log: string) => request<TaskDto>(`/api/workspaces/${workspaceId}/tasks/${id}/fail`, { method: 'POST', body: log }),
-    delete: (workspaceId: number, id: number) => request<void>(`/api/workspaces/${workspaceId}/tasks/${id}`, { method: 'DELETE' }),
+    create: (workspaceId: number) => mutate<TaskDto>(`/api/workspaces/${workspaceId}/tasks`, { method: 'POST' }, () => invalidateTasks(workspaceId)),
+    start: (workspaceId: number, id: number) => mutate<TaskDto>(`/api/workspaces/${workspaceId}/tasks/${id}/start`, { method: 'POST' }, () => invalidateTasks(workspaceId)),
+    complete: (workspaceId: number, id: number, log: string) => mutate<TaskDto>(`/api/workspaces/${workspaceId}/tasks/${id}/complete`, { method: 'POST', body: log }, () => invalidateTasks(workspaceId)),
+    fail: (workspaceId: number, id: number, log: string) => mutate<TaskDto>(`/api/workspaces/${workspaceId}/tasks/${id}/fail`, { method: 'POST', body: log }, () => invalidateTasks(workspaceId)),
+    delete: (workspaceId: number, id: number) => mutate<void>(`/api/workspaces/${workspaceId}/tasks/${id}`, { method: 'DELETE' }, () => invalidateTasks(workspaceId)),
   },
   schedule: {
     run: (workspaceId: number, mode: 'new' | 'update') =>
-      request<TaskDto>(`/api/workspaces/${workspaceId}/schedule?mode=${mode}`, { method: 'POST' }),
+      mutate<TaskDto>(`/api/workspaces/${workspaceId}/schedule?mode=${mode}`, { method: 'POST' }, () => {
+        invalidateTasks(workspaceId); invalidateSchedule(workspaceId); invalidateDashboard(workspaceId);
+      }),
   },
   importExcel: async (workspaceId: number, file: File) => {
     const form = new FormData();
     form.append('file', file);
-    return request<ImportResultDto>(`/api/workspaces/${workspaceId}/import`, { method: 'POST', body: form });
+    return mutate<ImportResultDto>(`/api/workspaces/${workspaceId}/import`, { method: 'POST', body: form }, () => {
+      invalidateWorkspace(workspaceId); invalidateCache('/api/workspaces');
+    });
   },
   exportExcel: (workspaceId: number, params?: { sheets?: string[]; type?: string }) => {
     const query = new URLSearchParams();
