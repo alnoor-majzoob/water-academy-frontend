@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp, t } from '../context/AppContext';
 import { Plus, Search, Edit2, Trash2, X, MapPin } from 'lucide-react';
 import { api, type TrainerDto } from '../lib/api';
+import { Pagination } from '../components/ui/Pagination';
+import { usePagination } from '../hooks/usePagination';
 
 type UiTrainer = {
   id: number;
@@ -46,6 +48,11 @@ export function Trainers() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { page, size, setPage, setSize, resetPage } = usePagination(20);
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [cities, setCities] = useState<string[]>([]);
+  const [trainerTypes, setTrainerTypes] = useState<string[]>([]);
 
   const isDarkCard = `rounded-2xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} shadow-sm`;
   const inputCls = `w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400' : 'bg-white border-slate-200 text-slate-800'}`;
@@ -61,8 +68,16 @@ export function Trainers() {
     if (!activeWorkspace) return;
     setLoading(true);
     try {
-      const data = await api.trainers.list(activeWorkspace);
-      setTrainers(data.map(mapTrainer));
+      const data = await api.trainers.list(activeWorkspace, {
+        page,
+        size,
+        search,
+        city: filterCity,
+        trainerType: filterType,
+      });
+      setTrainers(data.content.map(mapTrainer));
+      setTotalElements(data.totalElements);
+      setTotalPages(data.totalPages || 1);
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Failed to load trainers');
     } finally {
@@ -72,15 +87,20 @@ export function Trainers() {
 
   useEffect(() => {
     void loadTrainers();
+  }, [activeWorkspace, page, size, search, filterCity, filterType]);
+
+  useEffect(() => {
+    if (!activeWorkspace) return;
+    api.trainers.filterOptions(activeWorkspace)
+      .then((options) => {
+        setCities(options.cities);
+        setTrainerTypes(options.trainerTypes);
+      })
+      .catch(() => {
+        setCities([]);
+        setTrainerTypes([]);
+      });
   }, [activeWorkspace]);
-
-  const filtered = useMemo(() => trainers.filter((tr) =>
-    (tr.name.toLowerCase().includes(search.toLowerCase()) || tr.nameEn.toLowerCase().includes(search.toLowerCase())) &&
-    (!filterCity || tr.city === filterCity) &&
-    (!filterType || tr.trainerType === filterType)
-  ), [filterCity, filterType, search, trainers]);
-
-  const cities = [...new Set(trainers.map((item) => item.city).filter(Boolean))];
 
   const openCreate = () => {
     setSelected(null);
@@ -146,7 +166,7 @@ export function Trainers() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{t('المدربون', 'Trainers', lang)}</h1>
-          <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t(`${trainers.length} مدرب`, `${trainers.length} trainers`, lang)}</p>
+          <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t(`${totalElements} مدرب`, `${totalElements} trainers`, lang)}</p>
         </div>
         <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium">
           <Plus size={16} /> {t('مدرب جديد', 'New Trainer', lang)}
@@ -156,17 +176,17 @@ export function Trainers() {
       <div className={`${isDarkCard} p-4 flex flex-wrap gap-3`}>
         <div className={`flex items-center gap-2 flex-1 min-w-[200px] rounded-xl border px-3 py-2 ${isDark ? 'bg-slate-700 border-slate-600' : 'bg-slate-50 border-slate-200'}`}>
           <Search size={14} className="text-slate-400" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('بحث...', 'Search...', lang)} className="bg-transparent outline-none text-sm flex-1" />
+          <input value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} placeholder={t('بحث...', 'Search...', lang)} className="bg-transparent outline-none text-sm flex-1" />
         </div>
-        <select value={filterCity} onChange={(e) => setFilterCity(e.target.value)} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>
+        <select value={filterCity} onChange={(e) => { setFilterCity(e.target.value); resetPage(); }} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>
           <option value="">{t('كل المدن', 'All Cities', lang)}</option>
           {cities.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>
+        <select value={filterType} onChange={(e) => { setFilterType(e.target.value); resetPage(); }} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>
           <option value="">{t('كل الأنواع', 'All Types', lang)}</option>
-          <option value="Internal">{t('داخلي', 'Internal', lang)}</option>
-          <option value="External">{t('خارجي', 'External', lang)}</option>
-          <option value="Freelance">{t('مستقل', 'Freelance', lang)}</option>
+          {(trainerTypes.length ? trainerTypes : ['Internal', 'External', 'Freelance']).map((type) => (
+            <option key={type} value={type}>{type === 'Internal' ? t('داخلي', 'Internal', lang) : type === 'External' ? t('خارجي', 'External', lang) : type === 'Freelance' ? t('مستقل', 'Freelance', lang) : type}</option>
+          ))}
         </select>
       </div>
 
@@ -174,15 +194,15 @@ export function Trainers() {
         <div className="flex items-center justify-center min-h-[300px]">
           <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
         </div>
-      ) : filtered.length === 0 ? (
+      ) : trainers.length === 0 ? (
         <div className={`text-center py-16 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-          {trainers.length === 0
+          {totalElements === 0 && !search && !filterCity && !filterType
             ? t('لا يوجد مدربين بعد. أضف مدرب جديد', 'No trainers yet. Add a new trainer.', lang)
             : t('لا يوجد مدربين يطابقون الفلتر', 'No trainers match the current filters', lang)}
         </div>
       ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {filtered.map((trainer) => {
+        {trainers.map((trainer) => {
           return (
             <div key={trainer.id} className={`${isDarkCard} p-5 hover:shadow-md transition-shadow`}>
               <div className="flex items-start justify-between mb-4">
@@ -231,6 +251,12 @@ export function Trainers() {
           );
         })}
       </div>
+      )}
+
+      {!loading && trainers.length > 0 && (
+        <div className={isDarkCard}>
+          <Pagination page={page} size={size} totalElements={totalElements} totalPages={totalPages} onPageChange={setPage} onSizeChange={setSize} lang={lang} isDark={isDark} loading={loading} />
+        </div>
       )}
 
       {showDrawer && form && (

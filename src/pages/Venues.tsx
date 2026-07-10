@@ -61,7 +61,7 @@ export function Venues() {
     if (!activeWorkspace) return;
     setLoading(true);
     try {
-      const data = await api.venues.list(activeWorkspace);
+      const data = await api.venues.listAll(activeWorkspace);
       setVenues(data.map(mapVenue));
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Failed to load venues');

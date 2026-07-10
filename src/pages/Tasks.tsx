@@ -50,7 +50,7 @@ export function Tasks() {
     if (!activeWorkspace) return;
     setLoading(true);
     try {
-      const data = await api.tasks.list(activeWorkspace);
+      const data = await api.tasks.listAll(activeWorkspace);
       setTasks(data.map(mapTask));
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Failed to load tasks');

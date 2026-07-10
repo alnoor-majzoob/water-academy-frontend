@@ -23,10 +23,10 @@ export function Dashboard({ setActivePage }: Props) {
     if (!activeWorkspace) return;
     setLoading(true);
     Promise.all([
-      api.courses.list(activeWorkspace),
-      api.trainers.list(activeWorkspace),
-      api.venues.list(activeWorkspace),
-      api.scheduleEntries.list(activeWorkspace),
+      api.courses.listAll(activeWorkspace),
+      api.trainers.listAll(activeWorkspace),
+      api.venues.listAll(activeWorkspace),
+      api.scheduleEntries.listAll(activeWorkspace),
     ]).then(([courseRows, trainerRows, venueRows, scheduleRows]) => {
       setCourses(courseRows);
       setTrainers(trainerRows);

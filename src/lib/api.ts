@@ -5,6 +5,54 @@ export type CourseType = 'IN_PERSON' | 'ONLINE' | 'EXTERNAL';
 export type ScheduleStatus = 'SCHEDULED' | 'CONFIRMED' | 'COMPLETED';
 export type TaskStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
 
+export interface PageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
+}
+
+export interface PageParams {
+  page?: number;
+  size?: number;
+  sort?: string | string[];
+  search?: string;
+  [key: string]: unknown;
+}
+
+export interface CourseFilterOptionsDto {
+  cities: string[];
+  types: CourseType[];
+  priorities: string[];
+  specializations: string[];
+}
+
+export interface TrainerFilterOptionsDto {
+  cities: string[];
+  trainerTypes: string[];
+  specialties: string[];
+}
+
+export interface VenueFilterOptionsDto {
+  cities: string[];
+  types: CourseType[];
+}
+
+export interface ScheduleEntryFilterOptionsDto {
+  cities: string[];
+  statuses: ScheduleStatus[];
+  months: string[];
+  hasConflicts: boolean[];
+}
+
+export interface TaskFilterOptionsDto {
+  statuses: TaskStatus[];
+  types: string[];
+}
+
 export interface WorkspaceDto {
   id: number;
   name: string;
@@ -159,6 +207,21 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+function query(params?: PageParams): string {
+  if (!params) return '';
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+    if (Array.isArray(value)) {
+      value.forEach((item) => search.append(key, String(item)));
+      return;
+    }
+    search.set(key, String(value));
+  });
+  const qs = search.toString();
+  return qs ? `?${qs}` : '';
+}
+
 async function download(path: string): Promise<Blob> {
   const response = await fetch(`${API_BASE}${path}`);
   if (!response.ok) {
@@ -179,7 +242,9 @@ export const api = {
     delete: (id: number) => request<void>(`/api/workspaces/${id}`, { method: 'DELETE' }),
   },
   courses: {
-    list: (workspaceId: number) => request<CourseDto[]>(`/api/workspaces/${workspaceId}/courses`),
+    list: (workspaceId: number, params?: PageParams) => request<PageResponse<CourseDto>>(`/api/workspaces/${workspaceId}/courses${query(params)}`),
+    listAll: (workspaceId: number) => request<CourseDto[]>(`/api/workspaces/${workspaceId}/courses/all`),
+    filterOptions: (workspaceId: number) => request<CourseFilterOptionsDto>(`/api/workspaces/${workspaceId}/courses/filter-options`),
     create: (workspaceId: number, body: Record<string, unknown>) =>
       request<CourseDto>(`/api/workspaces/${workspaceId}/courses`, { method: 'POST', body: JSON.stringify(body) }),
     update: (workspaceId: number, id: number, body: Record<string, unknown>) =>
@@ -187,7 +252,9 @@ export const api = {
     delete: (workspaceId: number, id: number) => request<void>(`/api/workspaces/${workspaceId}/courses/${id}`, { method: 'DELETE' }),
   },
   trainers: {
-    list: (workspaceId: number) => request<TrainerDto[]>(`/api/workspaces/${workspaceId}/trainers`),
+    list: (workspaceId: number, params?: PageParams) => request<PageResponse<TrainerDto>>(`/api/workspaces/${workspaceId}/trainers${query(params)}`),
+    listAll: (workspaceId: number) => request<TrainerDto[]>(`/api/workspaces/${workspaceId}/trainers/all`),
+    filterOptions: (workspaceId: number) => request<TrainerFilterOptionsDto>(`/api/workspaces/${workspaceId}/trainers/filter-options`),
     create: (workspaceId: number, body: Record<string, unknown>) =>
       request<TrainerDto>(`/api/workspaces/${workspaceId}/trainers`, { method: 'POST', body: JSON.stringify(body) }),
     update: (workspaceId: number, id: number, body: Record<string, unknown>) =>
@@ -195,7 +262,9 @@ export const api = {
     delete: (workspaceId: number, id: number) => request<void>(`/api/workspaces/${workspaceId}/trainers/${id}`, { method: 'DELETE' }),
   },
   venues: {
-    list: (workspaceId: number) => request<VenueDto[]>(`/api/workspaces/${workspaceId}/venues`),
+    list: (workspaceId: number, params?: PageParams) => request<PageResponse<VenueDto>>(`/api/workspaces/${workspaceId}/venues${query(params)}`),
+    listAll: (workspaceId: number) => request<VenueDto[]>(`/api/workspaces/${workspaceId}/venues/all`),
+    filterOptions: (workspaceId: number) => request<VenueFilterOptionsDto>(`/api/workspaces/${workspaceId}/venues/filter-options`),
     create: (workspaceId: number, body: Record<string, unknown>) =>
       request<VenueDto>(`/api/workspaces/${workspaceId}/venues`, { method: 'POST', body: JSON.stringify(body) }),
     update: (workspaceId: number, id: number, body: Record<string, unknown>) =>
@@ -203,7 +272,8 @@ export const api = {
     delete: (workspaceId: number, id: number) => request<void>(`/api/workspaces/${workspaceId}/venues/${id}`, { method: 'DELETE' }),
   },
   calendarDays: {
-    list: (workspaceId: number) => request<CalendarDayDto[]>(`/api/workspaces/${workspaceId}/calendar-days`),
+    list: (workspaceId: number, params?: PageParams) => request<PageResponse<CalendarDayDto>>(`/api/workspaces/${workspaceId}/calendar-days${query(params)}`),
+    listAll: (workspaceId: number) => request<CalendarDayDto[]>(`/api/workspaces/${workspaceId}/calendar-days/all`),
     create: (workspaceId: number, body: { date: string; isWorkDay: boolean; isHoliday: boolean }) =>
       request<CalendarDayDto>(`/api/workspaces/${workspaceId}/calendar-days`, { method: 'POST', body: JSON.stringify(body) }),
     bulkCreate: (workspaceId: number, body: { date: string; isWorkDay: boolean; isHoliday: boolean }[]) =>
@@ -213,13 +283,16 @@ export const api = {
     delete: (workspaceId: number, id: number) => request<void>(`/api/workspaces/${workspaceId}/calendar-days/${id}`, { method: 'DELETE' }),
   },
   assignments: {
-    list: (workspaceId: number) => request<AssignmentDto[]>(`/api/workspaces/${workspaceId}/assignments`),
+    list: (workspaceId: number, params?: PageParams) => request<PageResponse<AssignmentDto>>(`/api/workspaces/${workspaceId}/assignments${query(params)}`),
+    listAll: (workspaceId: number) => request<AssignmentDto[]>(`/api/workspaces/${workspaceId}/assignments/all`),
     create: (workspaceId: number, body: { trainerId: number; courseId: number }) =>
       request<AssignmentDto>(`/api/workspaces/${workspaceId}/assignments`, { method: 'POST', body: JSON.stringify(body) }),
     delete: (workspaceId: number, id: number) => request<void>(`/api/workspaces/${workspaceId}/assignments/${id}`, { method: 'DELETE' }),
   },
   scheduleEntries: {
-    list: (workspaceId: number) => request<ScheduleEntryDto[]>(`/api/workspaces/${workspaceId}/schedule-entries`),
+    list: (workspaceId: number, params?: PageParams) => request<PageResponse<ScheduleEntryDto>>(`/api/workspaces/${workspaceId}/schedule-entries${query(params)}`),
+    listAll: (workspaceId: number) => request<ScheduleEntryDto[]>(`/api/workspaces/${workspaceId}/schedule-entries/all`),
+    filterOptions: (workspaceId: number) => request<ScheduleEntryFilterOptionsDto>(`/api/workspaces/${workspaceId}/schedule-entries/filter-options`),
     create: (workspaceId: number, body: Record<string, unknown>) =>
       request<ScheduleEntryDto>(`/api/workspaces/${workspaceId}/schedule-entries`, { method: 'POST', body: JSON.stringify(body) }),
     update: (workspaceId: number, id: number, body: Record<string, unknown>) =>
@@ -233,7 +306,9 @@ export const api = {
       request<ScheduleEntryDto[]>(`/api/workspaces/${workspaceId}/schedule-entries/conflicts/trainer?trainerId=${encodeURIComponent(trainerId)}&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`),
   },
   tasks: {
-    list: (workspaceId: number) => request<TaskDto[]>(`/api/workspaces/${workspaceId}/tasks`),
+    list: (workspaceId: number, params?: PageParams) => request<PageResponse<TaskDto>>(`/api/workspaces/${workspaceId}/tasks${query(params)}`),
+    listAll: (workspaceId: number) => request<TaskDto[]>(`/api/workspaces/${workspaceId}/tasks/all`),
+    filterOptions: (workspaceId: number) => request<TaskFilterOptionsDto>(`/api/workspaces/${workspaceId}/tasks/filter-options`),
     get: (workspaceId: number, id: number) => request<TaskDto>(`/api/workspaces/${workspaceId}/tasks/${id}`),
     create: (workspaceId: number) => request<TaskDto>(`/api/workspaces/${workspaceId}/tasks`, { method: 'POST' }),
     start: (workspaceId: number, id: number) => request<TaskDto>(`/api/workspaces/${workspaceId}/tasks/${id}/start`, { method: 'POST' }),

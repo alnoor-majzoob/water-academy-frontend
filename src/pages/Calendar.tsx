@@ -33,7 +33,7 @@ export function CalendarPage() {
     if (!activeWorkspace) return;
     setLoading(true);
     try {
-      const data = await api.calendarDays.list(activeWorkspace);
+      const data = await api.calendarDays.listAll(activeWorkspace);
       setCalendarDays(data);
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Failed to load calendar');

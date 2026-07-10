@@ -32,7 +32,7 @@ export function Unscheduled() {
   useEffect(() => {
     if (!activeWorkspace) return;
     setLoading(true);
-    Promise.all([api.courses.list(activeWorkspace), api.scheduleEntries.list(activeWorkspace)])
+    Promise.all([api.courses.listAll(activeWorkspace), api.scheduleEntries.listAll(activeWorkspace)])
       .then(([courseRows, entryRows]) => { setCourses(courseRows); setScheduleEntries(entryRows); })
       .catch((error: unknown) => addToast('error', error instanceof Error ? error.message : 'Failed to load unscheduled courses'))
       .finally(() => setLoading(false));

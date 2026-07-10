@@ -54,9 +54,9 @@ export function Assignments() {
     setLoading(true);
     try {
       const [assignmentRows, courseRows, trainerRows] = await Promise.all([
-        api.assignments.list(activeWorkspace),
-        api.courses.list(activeWorkspace),
-        api.trainers.list(activeWorkspace),
+        api.assignments.listAll(activeWorkspace),
+        api.courses.listAll(activeWorkspace),
+        api.trainers.listAll(activeWorkspace),
       ]);
       setCourses(courseRows);
       setTrainers(trainerRows);

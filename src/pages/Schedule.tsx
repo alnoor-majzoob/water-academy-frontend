@@ -59,10 +59,10 @@ export function Schedule() {
     setLoading(true);
     try {
       const [entryRows, courseRows, trainerRows, venueRows] = await Promise.all([
-        api.scheduleEntries.list(activeWorkspace),
-        api.courses.list(activeWorkspace),
-        api.trainers.list(activeWorkspace),
-        api.venues.list(activeWorkspace),
+        api.scheduleEntries.listAll(activeWorkspace),
+        api.courses.listAll(activeWorkspace),
+        api.trainers.listAll(activeWorkspace),
+        api.venues.listAll(activeWorkspace),
       ]);
       setCourses(courseRows);
       setTrainers(trainerRows);

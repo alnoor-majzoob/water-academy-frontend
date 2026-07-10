@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp, t } from '../context/AppContext';
 import { Plus, Search, Edit2, Trash2, ChevronUp, ChevronDown, X } from 'lucide-react';
 import { PriorityBadge } from '../components/ui/StatusChip';
 import { api, courseTypeLabel, formatDate, uiToCourseType, type CourseDto } from '../lib/api';
+import { Pagination } from '../components/ui/Pagination';
+import { usePagination } from '../hooks/usePagination';
 
 type UiCourse = {
   id: number;
@@ -54,12 +56,14 @@ export function Courses() {
   const [selectedCourse, setSelectedCourse] = useState<UiCourse | null>(null);
   const [sortField, setSortField] = useState<keyof UiCourse>('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-  const [currentPage, setCurrentPage] = useState(1);
   const [selected, setSelected] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
-  const perPage = 5;
+  const { page, size, setPage, setSize, resetPage } = usePagination(20);
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [cities, setCities] = useState<string[]>([]);
 
   const inputCls = `w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500
     ${isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400' : 'bg-white border-slate-200 text-slate-800'}`;
@@ -76,8 +80,18 @@ export function Courses() {
     if (!activeWorkspace) return;
     setLoading(true);
     try {
-      const data = await api.courses.list(activeWorkspace);
-      setCourses(data.map(mapCourse));
+      const data = await api.courses.list(activeWorkspace, {
+        page,
+        size,
+        sort: `${sortField},${sortDir}`,
+        search,
+        priority: filterPriority,
+        type: filterType ? uiToCourseType(filterType) : undefined,
+        city: filterCity,
+      });
+      setCourses(data.content.map(mapCourse));
+      setTotalElements(data.totalElements);
+      setTotalPages(data.totalPages || 1);
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Failed to load courses');
     } finally {
@@ -87,35 +101,26 @@ export function Courses() {
 
   useEffect(() => {
     void loadCourses();
+  }, [activeWorkspace, page, size, sortField, sortDir, search, filterPriority, filterType, filterCity]);
+
+  useEffect(() => {
+    if (!activeWorkspace) return;
+    api.courses.filterOptions(activeWorkspace)
+      .then((options) => setCities(options.cities))
+      .catch(() => setCities([]));
   }, [activeWorkspace]);
 
-  const filtered = useMemo(() => courses.filter((c) => {
-    const name = lang === 'ar' ? c.name : c.nameEn;
-    return (
-      (name.toLowerCase().includes(search.toLowerCase()) || c.externalId.includes(search)) &&
-      (!filterPriority || c.priority === filterPriority) &&
-      (!filterType || c.type === filterType) &&
-      (!filterCity || c.city === filterCity)
-    );
-  }).sort((a, b) => {
-    const av = String(a[sortField] || '');
-    const bv = String(b[sortField] || '');
-    return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
-  }), [courses, filterCity, filterPriority, filterType, lang, search, sortDir, sortField]);
-
-  const paginated = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
-  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+  const paginated = courses;
 
   const handleSort = (field: keyof UiCourse) => {
     if (sortField === field) setSortDir((d) => d === 'asc' ? 'desc' : 'asc');
     else { setSortField(field); setSortDir('asc'); }
+    resetPage();
   };
 
   const SortIcon = ({ field }: { field: keyof UiCourse }) => (
     sortField === field ? (sortDir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />) : <ChevronUp size={12} className="opacity-30" />
   );
-
-  const cities = [...new Set(courses.map((c) => c.city).filter(Boolean))];
 
   const openCreate = () => { setForm(emptyForm); setSelectedCourse(null); setErrors({}); setShowDrawer(true); };
   const openEdit = (course: UiCourse) => { setForm(course); setSelectedCourse(course); setErrors({}); setShowDrawer(true); };
@@ -190,7 +195,7 @@ export function Courses() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{t('الدورات', 'Courses', lang)}</h1>
-          <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{loading ? t('جاري التحميل...', 'Loading...', lang) : t(`${courses.length} دورة مسجلة`, `${courses.length} courses`, lang)}</p>
+          <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{loading ? t('جاري التحميل...', 'Loading...', lang) : t(`${totalElements} دورة مسجلة`, `${totalElements} courses`, lang)}</p>
         </div>
         <button onClick={openCreate} disabled={!activeWorkspace} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors disabled:opacity-50">
           <Plus size={16} /> {t('دورة جديدة', 'New Course', lang)}
@@ -202,26 +207,26 @@ export function Courses() {
           <div className={`flex items-center gap-2 flex-1 min-w-[200px] rounded-xl border px-3 py-2
             ${isDark ? 'bg-slate-700 border-slate-600' : 'bg-slate-50 border-slate-200'}`}>
             <Search size={14} className={isDark ? 'text-slate-400' : 'text-slate-400'} />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('بحث...', 'Search...', lang)} className="bg-transparent outline-none text-sm flex-1 placeholder:text-slate-400" />
+            <input value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} placeholder={t('بحث...', 'Search...', lang)} className="bg-transparent outline-none text-sm flex-1 placeholder:text-slate-400" />
           </div>
-          <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-700'}`}>
+          <select value={filterPriority} onChange={(e) => { setFilterPriority(e.target.value); resetPage(); }} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-700'}`}>
             <option value="">{t('كل الأولويات', 'All Priorities', lang)}</option>
             <option value="High">{t('عالية', 'High', lang)}</option>
             <option value="Medium">{t('متوسطة', 'Medium', lang)}</option>
             <option value="Low">{t('منخفضة', 'Low', lang)}</option>
           </select>
-          <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-700'}`}>
+          <select value={filterType} onChange={(e) => { setFilterType(e.target.value); resetPage(); }} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-700'}`}>
             <option value="">{t('كل الأنواع', 'All Types', lang)}</option>
             <option value="In-person">{t('حضوري', 'In-person', lang)}</option>
             <option value="Online">{t('أونلاين', 'Online', lang)}</option>
             <option value="External">{t('خارجي', 'External', lang)}</option>
           </select>
-          <select value={filterCity} onChange={(e) => setFilterCity(e.target.value)} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-700'}`}>
+          <select value={filterCity} onChange={(e) => { setFilterCity(e.target.value); resetPage(); }} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-700'}`}>
             <option value="">{t('كل المدن', 'All Cities', lang)}</option>
             {cities.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
           {(search || filterPriority || filterType || filterCity) && (
-            <button onClick={() => { setSearch(''); setFilterPriority(''); setFilterType(''); setFilterCity(''); }} className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700">
+            <button onClick={() => { setSearch(''); setFilterPriority(''); setFilterType(''); setFilterCity(''); resetPage(); }} className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700">
               <X size={14} /> {t('مسح', 'Clear', lang)}
             </button>
           )}
@@ -296,12 +301,7 @@ export function Courses() {
           </table>
         </div>
         <div className={`flex items-center justify-between px-4 py-3 border-t ${isDark ? 'border-slate-700 text-slate-400' : 'border-slate-100 text-slate-500'}`}>
-          <span className="text-xs">{t(`إجمالي: ${filtered.length} دورة`, `Total: ${filtered.length} courses`, lang)}</span>
-          <div className="flex items-center gap-1">
-            {Array.from({ length: totalPages }, (_, i) => (
-              <button key={i} onClick={() => setCurrentPage(i + 1)} className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors ${currentPage === i + 1 ? 'bg-blue-600 text-white' : isDark ? 'hover:bg-slate-700' : 'hover:bg-slate-100'}`}>{i + 1}</button>
-            ))}
-          </div>
+          <Pagination page={page} size={size} totalElements={totalElements} totalPages={totalPages} onPageChange={setPage} onSizeChange={setSize} lang={lang} isDark={isDark} loading={loading} />
         </div>
       </div>
       )}

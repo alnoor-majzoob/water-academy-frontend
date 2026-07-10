@@ -37,7 +37,7 @@ export function Conflicts() {
   useEffect(() => {
     if (!activeWorkspace) return;
     setLoading(true);
-    api.scheduleEntries.list(activeWorkspace)
+    api.scheduleEntries.listAll(activeWorkspace)
       .then(setEntries)
       .catch((error: unknown) => addToast('error', error instanceof Error ? error.message : 'Failed to load conflicts'))
       .finally(() => setLoading(false));
