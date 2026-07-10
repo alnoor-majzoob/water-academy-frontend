@@ -230,6 +230,8 @@ export function Schedule() {
   const ganttDays = Array.from({ length: ganttDaysInMonth }, (_, i) => i + 1);
   const ganttGridColumns = `repeat(${ganttDaysInMonth}, minmax(44px, 1fr))`;
   const ganttMinWidth = `${ganttDaysInMonth * 44}px`;
+  const ganttChartMinWidth = `${280 + (ganttDaysInMonth * 44)}px`;
+  const ganttLayoutColumns = `280px ${ganttMinWidth}`;
   const ganttMonthStart = new Date(ganttYear, ganttMonthIndex, 1);
   const ganttMonthEnd = new Date(ganttYear, ganttMonthIndex, ganttDaysInMonth);
 
@@ -311,10 +313,10 @@ export function Schedule() {
             <div className={`p-12 text-center text-sm ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t('لا توجد مدخلات تطابق الفلتر', 'No entries match the current filters', lang)}</div>
           ) : (
             <div className="overflow-x-auto">
-              <div className="min-w-[920px]">
-                <div className={`grid border-b ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-slate-100 bg-slate-50'}`} style={{ gridTemplateColumns: '280px 1fr' }}>
+              <div style={{ minWidth: ganttChartMinWidth }}>
+                <div className={`grid border-b ${isDark ? 'border-slate-700 bg-slate-900/40' : 'border-slate-100 bg-slate-50'}`} style={{ gridTemplateColumns: ganttLayoutColumns }}>
                   <div className={`px-4 py-3 text-xs font-semibold uppercase ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t('الدورة', 'Course', lang)}</div>
-                  <div className="overflow-hidden">
+                  <div>
                     <div className="grid" style={{ gridTemplateColumns: ganttGridColumns, minWidth: ganttMinWidth }}>
                       {ganttDays.map((day) => <div key={day} className={`py-3 text-center text-[11px] font-semibold border-s ${isDark ? 'border-slate-800 text-slate-500' : 'border-slate-200 text-slate-500'}`}>{day}</div>)}
                     </div>
@@ -324,7 +326,7 @@ export function Schedule() {
                   {filtered.map((entry) => {
                     const bar = getGanttBar(entry);
                     return (
-                      <div key={entry.id} className="grid min-h-[72px]" style={{ gridTemplateColumns: '280px 1fr' }}>
+                      <div key={entry.id} className="grid min-h-[72px]" style={{ gridTemplateColumns: ganttLayoutColumns }}>
                         <div className={`px-4 py-3 ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
                           <div className="flex items-start gap-2">
                             {entry.hasConflict && <AlertTriangle size={14} className="mt-0.5 text-red-500 flex-shrink-0" />}
@@ -335,7 +337,7 @@ export function Schedule() {
                             </div>
                           </div>
                         </div>
-                        <div className="overflow-hidden py-4 pe-4">
+                        <div className="py-4 pe-4">
                           <div className="grid relative h-10" style={{ gridTemplateColumns: ganttGridColumns, minWidth: ganttMinWidth }}>
                             {ganttDays.map((day) => <div key={day} className={`border-s ${isDark ? 'border-slate-800' : 'border-slate-100'}`} />)}
                             <div
