@@ -234,14 +234,20 @@ export function Schedule() {
   const ganttLayoutColumns = `280px ${ganttMinWidth}`;
   const ganttMonthStart = new Date(ganttYear, ganttMonthIndex, 1);
   const ganttMonthEnd = new Date(ganttYear, ganttMonthIndex, ganttDaysInMonth);
+  const ganttEntries = filtered.filter((entry) => {
+    const start = new Date(entry.startDate);
+    const end = new Date(entry.endDate);
+    return start <= ganttMonthEnd && end >= ganttMonthStart;
+  });
 
   const getGanttBar = (entry: UiScheduleEntry) => {
     const start = new Date(entry.startDate);
     const end = new Date(entry.endDate);
     const visibleStart = start < ganttMonthStart ? ganttMonthStart : start;
     const visibleEnd = end > ganttMonthEnd ? ganttMonthEnd : end;
-    const startDay = visibleStart.getDate();
-    const duration = Math.max(1, visibleEnd.getDate() - startDay + 1);
+    const startDay = Math.min(Math.max(visibleStart.getDate(), 1), ganttDaysInMonth);
+    const endDay = Math.min(Math.max(visibleEnd.getDate(), startDay), ganttDaysInMonth);
+    const duration = Math.max(1, endDay - startDay + 1);
     return { startDay, duration };
   };
 
@@ -284,7 +290,7 @@ export function Schedule() {
           <option value="">{t('كل الأشهر', 'All Months', lang)}</option>
           {months.map((m, i) => <option key={i} value={i}>{m}</option>)}
         </select>
-        <div className={`flex items-center gap-1.5 ms-auto text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}><Filter size={14} />{view === 'table' ? tableTotalElements : filtered.length} {t('نتيجة', 'results', lang)}</div>
+        <div className={`flex items-center gap-1.5 ms-auto text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}><Filter size={14} />{view === 'table' ? tableTotalElements : view === 'gantt' ? ganttEntries.length : filtered.length} {t('نتيجة', 'results', lang)}</div>
       </div>
 
       {loading || (view === 'table' && loadingTable) ? (
@@ -309,7 +315,7 @@ export function Schedule() {
               ].map(([color, label]) => <span key={label} className={`flex items-center gap-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}><span className={`w-2.5 h-2.5 rounded-full ${color}`} />{label}</span>)}
             </div>
           </div>
-          {filtered.length === 0 ? (
+          {ganttEntries.length === 0 ? (
             <div className={`p-12 text-center text-sm ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t('لا توجد مدخلات تطابق الفلتر', 'No entries match the current filters', lang)}</div>
           ) : (
             <div className="overflow-x-auto">
@@ -323,7 +329,7 @@ export function Schedule() {
                   </div>
                 </div>
                 <div className={isDark ? 'divide-y divide-slate-700/70' : 'divide-y divide-slate-100'}>
-                  {filtered.map((entry) => {
+                  {ganttEntries.map((entry) => {
                     const bar = getGanttBar(entry);
                     return (
                       <div key={entry.id} className="grid min-h-[72px]" style={{ gridTemplateColumns: ganttLayoutColumns }}>
