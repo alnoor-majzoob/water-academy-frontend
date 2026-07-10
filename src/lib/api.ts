@@ -159,6 +159,7 @@ export interface ScheduleEntryDto {
   trainerName: string;
   venueId: number | null;
   venueName: string | null;
+  venueCity: string | null;
   startDate: string;
   endDate: string;
   status: ScheduleStatus;

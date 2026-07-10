@@ -25,6 +25,7 @@ export function Schedule() {
   const [courses, setCourses] = useState<CourseDto[]>([]);
   const [trainers, setTrainers] = useState<TrainerDto[]>([]);
   const [venues, setVenues] = useState<VenueDto[]>([]);
+  const [cities, setCities] = useState<string[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [showConflictWarning, setShowConflictWarning] = useState(false);
   const [filterStatus, setFilterStatus] = useState('');
@@ -33,6 +34,7 @@ export function Schedule() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingTable, setLoadingTable] = useState(false);
+  const [loadingFormOptions, setLoadingFormOptions] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({ courseId: '', trainerId: '', venueId: '', startDate: '', endDate: '', notes: '' });
   const [pendingPayload, setPendingPayload] = useState<typeof form | null>(null);
@@ -40,11 +42,22 @@ export function Schedule() {
   const { page, size, setPage, setSize, resetPage } = usePagination(20);
   const [tableTotalElements, setTableTotalElements] = useState(0);
   const [tableTotalPages, setTableTotalPages] = useState(1);
+  const [entriesTotal, setEntriesTotal] = useState(0);
 
   const card = `rounded-2xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} shadow-sm`;
   const inputCls = `w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-800'}`;
 
-  const mapEntry = (entry: ScheduleEntryDto, venueRows: VenueDto[]): UiScheduleEntry => ({
+  const scheduleParams = (monthValue = filterMonth) => ({
+    sort: 'startDate,asc',
+    status: filterStatus && filterStatus !== 'Conflict' ? uiToScheduleStatus(filterStatus as 'Scheduled' | 'Confirmed' | 'Completed') : undefined,
+    hasConflict: filterStatus === 'Conflict' ? true : undefined,
+    city: filterCity,
+    month: monthValue !== ''
+      ? `${currentWorkspace?.year || new Date().getFullYear()}-${String(Number(monthValue) + 1).padStart(2, '0')}`
+      : undefined,
+  });
+
+  const mapEntry = (entry: ScheduleEntryDto): UiScheduleEntry => ({
     id: entry.id,
     courseId: entry.courseId,
     courseName: entry.courseName,
@@ -53,7 +66,7 @@ export function Schedule() {
     trainerName: entry.trainerName,
     venueId: entry.venueId ?? 0,
     venueName: entry.venueName || '',
-    city: venueRows.find((venue) => venue.id === entry.venueId)?.city || '',
+    city: entry.venueCity || '',
     startDate: entry.startDate,
     endDate: entry.endDate,
     status: scheduleStatusLabel(entry.status, entry.conflictNotes),
@@ -61,20 +74,27 @@ export function Schedule() {
     notes: entry.conflictNotes || '',
   });
 
-  const loadData = async () => {
+  const loadFilterOptions = async () => {
+    if (!activeWorkspace) return;
+    try {
+      const options = await api.scheduleEntries.filterOptions(activeWorkspace);
+      setCities(options.cities);
+    } catch (error) {
+      addToast('error', error instanceof Error ? error.message : 'Failed to load schedule filters');
+    }
+  };
+
+  const loadEntries = async (monthValue = filterMonth) => {
     if (!activeWorkspace) return;
     setLoading(true);
     try {
-      const [entryRows, courseRows, trainerRows, venueRows] = await Promise.all([
-        api.scheduleEntries.listAll(activeWorkspace),
-        api.courses.listAll(activeWorkspace),
-        api.trainers.listAll(activeWorkspace),
-        api.venues.listAll(activeWorkspace),
-      ]);
-      setCourses(courseRows);
-      setTrainers(trainerRows);
-      setVenues(venueRows);
-      setEntries(entryRows.map((entry) => mapEntry(entry, venueRows)));
+      const data = await api.scheduleEntries.list(activeWorkspace, {
+        page: 0,
+        size: 500,
+        ...scheduleParams(monthValue),
+      });
+      setEntries(data.content.map(mapEntry));
+      setEntriesTotal(data.totalElements);
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Failed to load schedule');
     } finally {
@@ -86,19 +106,12 @@ export function Schedule() {
     if (!activeWorkspace) return;
     setLoadingTable(true);
     try {
-      const month = filterMonth !== ''
-        ? `${currentWorkspace?.year || new Date().getFullYear()}-${String(Number(filterMonth) + 1).padStart(2, '0')}`
-        : undefined;
       const data = await api.scheduleEntries.list(activeWorkspace, {
         page,
         size,
-        sort: 'startDate,asc',
-        status: filterStatus && filterStatus !== 'Conflict' ? uiToScheduleStatus(filterStatus as 'Scheduled' | 'Confirmed' | 'Completed') : undefined,
-        hasConflict: filterStatus === 'Conflict' ? true : undefined,
-        city: filterCity,
-        month,
+        ...scheduleParams(),
       });
-      setTableEntries(data.content.map((entry) => mapEntry(entry, venues)));
+      setTableEntries(data.content.map(mapEntry));
       setTableTotalElements(data.totalElements);
       setTableTotalPages(data.totalPages || 1);
     } catch (error) {
@@ -108,14 +121,47 @@ export function Schedule() {
     }
   };
 
+  const loadFormOptions = async () => {
+    if (!activeWorkspace || loadingFormOptions || (courses.length && trainers.length && venues.length)) return;
+    setLoadingFormOptions(true);
+    try {
+      const [courseRows, trainerRows, venueRows] = await Promise.all([
+        api.courses.listAll(activeWorkspace),
+        api.trainers.listAll(activeWorkspace),
+        api.venues.listAll(activeWorkspace),
+      ]);
+      setCourses(courseRows);
+      setTrainers(trainerRows);
+      setVenues(venueRows);
+    } catch (error) {
+      addToast('error', error instanceof Error ? error.message : 'Failed to load form options');
+    } finally {
+      setLoadingFormOptions(false);
+    }
+  };
+
   useEffect(() => {
-    void loadData();
+    setEntries([]);
+    setTableEntries([]);
+    setCourses([]);
+    setTrainers([]);
+    setVenues([]);
+    void loadFilterOptions();
   }, [activeWorkspace]);
 
   useEffect(() => {
     if (view !== 'table') return;
     void loadTableEntries();
-  }, [activeWorkspace, view, page, size, filterStatus, filterCity, filterMonth, venues]);
+  }, [activeWorkspace, view, page, size, filterStatus, filterCity, filterMonth]);
+
+  useEffect(() => {
+    if (view === 'table') return;
+    void loadEntries(view === 'gantt' && filterMonth === '' ? '0' : filterMonth);
+  }, [activeWorkspace, view, filterStatus, filterCity, filterMonth]);
+
+  useEffect(() => {
+    if (showModal) void loadFormOptions();
+  }, [showModal, activeWorkspace]);
 
   useEffect(() => {
     if (view === 'gantt' && filterMonth === '') {
@@ -123,13 +169,7 @@ export function Schedule() {
     }
   }, [filterMonth, view]);
 
-  const filtered = useMemo(() => entries.filter((e) =>
-    (!filterStatus || e.status === filterStatus) &&
-    (!filterCity || e.city === filterCity) &&
-    (filterMonth === '' || new Date(e.startDate).getMonth() === Number(filterMonth))
-  ), [entries, filterCity, filterMonth, filterStatus]);
-
-  const cities = [...new Set(entries.map((e) => e.city).filter(Boolean))];
+  const filtered = entries;
 
   const persistEntry = async (payload: typeof form) => {
     if (!activeWorkspace) return;
@@ -149,8 +189,8 @@ export function Schedule() {
       setPendingPayload(null);
       setForm({ courseId: '', trainerId: '', venueId: '', startDate: '', endDate: '', notes: '' });
       addToast(created.conflictNotes ? 'warning' : 'success', t(created.conflictNotes ? 'تم الحفظ مع تعارض!' : 'تم إنشاء مدخل الجدول', created.conflictNotes ? 'Saved with conflict!' : 'Schedule entry created', lang));
-      await loadData();
       if (view === 'table') await loadTableEntries();
+      else await loadEntries(view === 'gantt' && filterMonth === '' ? '0' : filterMonth);
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Schedule save failed');
     } finally {
@@ -189,10 +229,12 @@ export function Schedule() {
     if (!activeWorkspace || statusUpdating.has(id)) return;
     setStatusUpdating(prev => new Set(prev).add(id));
 
-    const prevStatus = entries.find(e => e.id === id)?.status as UiStatus | undefined;
+    const currentRows = view === 'table' ? tableEntries : entries;
+    const prevStatus = currentRows.find(e => e.id === id)?.status as UiStatus | undefined;
     if (!prevStatus) { setStatusUpdating(prev => { const n = new Set(prev); n.delete(id); return n; }); return; }
 
     setEntries(prev => prev.map(e => e.id === id ? { ...e, status: status as UiStatus } : e));
+    setTableEntries(prev => prev.map(e => e.id === id ? { ...e, status: status as UiStatus } : e));
 
     try {
       await api.scheduleEntries.updateStatus(activeWorkspace, id, uiToScheduleStatus(status));
@@ -200,6 +242,7 @@ export function Schedule() {
       if (view === 'table') await loadTableEntries();
     } catch (error) {
       setEntries(prev => prev.map(e => e.id === id ? { ...e, status: prevStatus } : e));
+      setTableEntries(prev => prev.map(e => e.id === id ? { ...e, status: prevStatus } : e));
       addToast('error', error instanceof Error ? error.message : 'Status update failed');
     } finally {
       setStatusUpdating(prev => {
@@ -215,15 +258,18 @@ export function Schedule() {
     const id = pendingDeleteId;
     setPendingDeleteId(null);
 
-    const deletedEntry = entries.find(e => e.id === id);
+    const deletedEntry = (view === 'table' ? tableEntries : entries).find(e => e.id === id);
     setEntries(prev => prev.filter(e => e.id !== id));
+    setTableEntries(prev => prev.filter(e => e.id !== id));
 
     try {
       await api.scheduleEntries.delete(activeWorkspace, id);
       addToast('success', t('تم حذف المدخل', 'Entry deleted', lang));
       if (view === 'table') await loadTableEntries();
+      else setEntriesTotal((prev) => Math.max(prev - 1, 0));
     } catch (error) {
       if (deletedEntry) setEntries(prev => [...prev, deletedEntry]);
+      if (deletedEntry) setTableEntries(prev => [...prev, deletedEntry]);
       addToast('error', error instanceof Error ? error.message : 'Delete failed');
     }
   };
@@ -269,7 +315,7 @@ export function Schedule() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{t('الجدول', 'Schedule', lang)}</h1>
-          <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t(`${entries.length} مدخل`, `${entries.length} entries`, lang)}</p>
+          <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t(`${view === 'table' ? tableTotalElements : entriesTotal} مدخل`, `${view === 'table' ? tableTotalElements : entriesTotal} entries`, lang)}</p>
         </div>
         <div className="flex items-center gap-2">
           <div className={`flex rounded-xl border p-1 gap-0.5 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white'}`}>
