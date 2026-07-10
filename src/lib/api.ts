@@ -179,6 +179,35 @@ export interface ImportResultDto {
   error: string | null;
 }
 
+export interface DashboardDto {
+  totalCourses: number;
+  scheduledCourses: number;
+  unscheduledCourses: number;
+  totalTrainers: number;
+  totalVenues: number;
+  conflicts: number;
+  coursesByMonth: number[];
+  coursesByType: {
+    inPerson: number;
+    online: number;
+    external: number;
+  };
+  trainerUtilization: {
+    trainerId: number;
+    trainerName: string;
+    scheduledDays: number;
+    maxDaysPerMonth: number;
+  }[];
+  upcomingSessions: {
+    id: number;
+    courseName: string;
+    trainerName: string;
+    startDate: string;
+    status: ScheduleStatus;
+    hasConflict: boolean;
+  }[];
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
@@ -231,6 +260,9 @@ async function download(path: string): Promise<Blob> {
 }
 
 export const api = {
+  dashboard: {
+    get: (workspaceId: number) => request<DashboardDto>(`/api/workspaces/${workspaceId}/dashboard`),
+  },
   workspaces: {
     list: () => request<WorkspaceDto[]>('/api/workspaces'),
     create: (body: { name: string; description?: string | null; year: number; color?: string | null }) =>
