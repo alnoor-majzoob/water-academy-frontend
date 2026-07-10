@@ -4,12 +4,14 @@ import { Plus, Calendar, List, LayoutGrid, Filter, AlertTriangle, X, Check, Lock
 import { StatusChip } from '../components/ui/StatusChip';
 import { Modal } from '../components/ui/Modal';
 import { api, scheduleStatusLabel, uiToScheduleStatus, type CourseDto, type ScheduleEntryDto, type TrainerDto, type VenueDto } from '../lib/api';
+import { Pagination } from '../components/ui/Pagination';
+import { usePagination } from '../hooks/usePagination';
 
 type ViewType = 'calendar' | 'table' | 'kanban';
 type UiStatus = 'Scheduled' | 'Confirmed' | 'Completed' | 'Conflict';
 
 export function Schedule() {
-  const { lang, theme, addToast, activeWorkspace } = useApp();
+  const { lang, theme, addToast, activeWorkspace, currentWorkspace } = useApp();
   const isDark = theme === 'dark';
 
   const months = useMemo(() =>
@@ -19,6 +21,7 @@ export function Schedule() {
   [lang]);
   const [view, setView] = useState<ViewType>('table');
   const [entries, setEntries] = useState<UiScheduleEntry[]>([]);
+  const [tableEntries, setTableEntries] = useState<UiScheduleEntry[]>([]);
   const [courses, setCourses] = useState<CourseDto[]>([]);
   const [trainers, setTrainers] = useState<TrainerDto[]>([]);
   const [venues, setVenues] = useState<VenueDto[]>([]);
@@ -29,10 +32,14 @@ export function Schedule() {
   const [filterMonth, setFilterMonth] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingTable, setLoadingTable] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({ courseId: '', trainerId: '', venueId: '', startDate: '', endDate: '', notes: '' });
   const [pendingPayload, setPendingPayload] = useState<typeof form | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const { page, size, setPage, setSize, resetPage } = usePagination(20);
+  const [tableTotalElements, setTableTotalElements] = useState(0);
+  const [tableTotalPages, setTableTotalPages] = useState(1);
 
   const card = `rounded-2xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} shadow-sm`;
   const inputCls = `w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-800'}`;
@@ -75,9 +82,40 @@ export function Schedule() {
     }
   };
 
+  const loadTableEntries = async () => {
+    if (!activeWorkspace) return;
+    setLoadingTable(true);
+    try {
+      const month = filterMonth !== ''
+        ? `${currentWorkspace?.year || new Date().getFullYear()}-${String(Number(filterMonth) + 1).padStart(2, '0')}`
+        : undefined;
+      const data = await api.scheduleEntries.list(activeWorkspace, {
+        page,
+        size,
+        sort: 'startDate,asc',
+        status: filterStatus && filterStatus !== 'Conflict' ? uiToScheduleStatus(filterStatus as 'Scheduled' | 'Confirmed' | 'Completed') : undefined,
+        hasConflict: filterStatus === 'Conflict' ? true : undefined,
+        city: filterCity,
+        month,
+      });
+      setTableEntries(data.content.map((entry) => mapEntry(entry, venues)));
+      setTableTotalElements(data.totalElements);
+      setTableTotalPages(data.totalPages || 1);
+    } catch (error) {
+      addToast('error', error instanceof Error ? error.message : 'Failed to load schedule table');
+    } finally {
+      setLoadingTable(false);
+    }
+  };
+
   useEffect(() => {
     void loadData();
   }, [activeWorkspace]);
+
+  useEffect(() => {
+    if (view !== 'table') return;
+    void loadTableEntries();
+  }, [activeWorkspace, view, page, size, filterStatus, filterCity, filterMonth, venues]);
 
   const filtered = useMemo(() => entries.filter((e) =>
     (!filterStatus || e.status === filterStatus) &&
@@ -106,6 +144,7 @@ export function Schedule() {
       setForm({ courseId: '', trainerId: '', venueId: '', startDate: '', endDate: '', notes: '' });
       addToast(created.conflictNotes ? 'warning' : 'success', t(created.conflictNotes ? 'تم الحفظ مع تعارض!' : 'تم إنشاء مدخل الجدول', created.conflictNotes ? 'Saved with conflict!' : 'Schedule entry created', lang));
       await loadData();
+      if (view === 'table') await loadTableEntries();
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Schedule save failed');
     } finally {
@@ -152,6 +191,7 @@ export function Schedule() {
     try {
       await api.scheduleEntries.updateStatus(activeWorkspace, id, uiToScheduleStatus(status));
       addToast('success', t('تم تحديث الحالة', 'Status updated', lang));
+      if (view === 'table') await loadTableEntries();
     } catch (error) {
       setEntries(prev => prev.map(e => e.id === id ? { ...e, status: prevStatus } : e));
       addToast('error', error instanceof Error ? error.message : 'Status update failed');
@@ -175,6 +215,7 @@ export function Schedule() {
     try {
       await api.scheduleEntries.delete(activeWorkspace, id);
       addToast('success', t('تم حذف المدخل', 'Entry deleted', lang));
+      if (view === 'table') await loadTableEntries();
     } catch (error) {
       if (deletedEntry) setEntries(prev => [...prev, deletedEntry]);
       addToast('error', error instanceof Error ? error.message : 'Delete failed');
@@ -209,24 +250,24 @@ export function Schedule() {
       </div>
 
       <div className={`${card} p-4 flex flex-wrap gap-3`}>
-        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>
+        <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); resetPage(); }} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>
           <option value="">{t('كل الحالات', 'All Statuses', lang)}</option>
           {['Scheduled','Confirmed','Completed','Conflict'].map((s) => (
             <option key={s} value={s}>{t({ Scheduled: 'مجدول', Confirmed: 'مؤكد', Completed: 'منتهي', Conflict: 'تعارض' }[s], s, lang)}</option>
           ))}
         </select>
-        <select value={filterCity} onChange={(e) => setFilterCity(e.target.value)} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>
+        <select value={filterCity} onChange={(e) => { setFilterCity(e.target.value); resetPage(); }} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>
           <option value="">{t('كل المدن', 'All Cities', lang)}</option>
           {cities.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>
+        <select value={filterMonth} onChange={(e) => { setFilterMonth(e.target.value); resetPage(); }} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>
           <option value="">{t('كل الأشهر', 'All Months', lang)}</option>
           {months.map((m, i) => <option key={i} value={i}>{m}</option>)}
         </select>
-        <div className={`flex items-center gap-1.5 ms-auto text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}><Filter size={14} />{filtered.length} {t('نتيجة', 'results', lang)}</div>
+        <div className={`flex items-center gap-1.5 ms-auto text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}><Filter size={14} />{view === 'table' ? tableTotalElements : filtered.length} {t('نتيجة', 'results', lang)}</div>
       </div>
 
-      {loading ? (
+      {loading || (view === 'table' && loadingTable) ? (
         <div className="flex items-center justify-center min-h-[300px]">
           <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
         </div>
@@ -259,7 +300,7 @@ export function Schedule() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((entry) => (
+                {tableEntries.map((entry) => (
                   <tr key={entry.id} className={`border-b table-row-hover ${isDark ? 'border-slate-700/50' : 'border-slate-50'} ${entry.hasConflict ? (isDark ? 'bg-red-900/10' : 'bg-red-50/50') : ''}`}>
                     <td className="px-4 py-3"><div className="flex items-center gap-2">{entry.hasConflict && <AlertTriangle size={13} className="text-red-500 flex-shrink-0" />}<span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>{lang === 'ar' ? entry.courseName : entry.courseNameEn}</span></div></td>
                     <td className={`px-4 py-3 text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{entry.trainerName}</td>
@@ -278,10 +319,10 @@ export function Schedule() {
                     </td>
                   </tr>
                 ))}
-                {filtered.length === 0 && (
+                {tableEntries.length === 0 && (
                   <tr>
                     <td colSpan={8} className={`text-center py-12 text-sm ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                      {entries.length === 0
+                      {tableTotalElements === 0
                         ? t('لا توجد مدخلات جدول بعد. اضف مدخلا جديدا', 'No schedule entries yet. Add a new entry.', lang)
                         : t('لا توجد مدخلات تطابق الفلتر', 'No entries match the current filters', lang)}
                     </td>
@@ -290,6 +331,9 @@ export function Schedule() {
               </tbody>
             </table>
           </div>
+          {!loadingTable && tableEntries.length > 0 && (
+            <Pagination page={page} size={size} totalElements={tableTotalElements} totalPages={tableTotalPages} onPageChange={setPage} onSizeChange={setSize} lang={lang} isDark={isDark} loading={loadingTable} />
+          )}
         </div>
       )}
 
