@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp, t } from '../context/AppContext';
 import { Plus, Search, Edit2, Trash2, X, MapPin, Users } from 'lucide-react';
-import { api, courseTypeLabel, uiToCourseType, type VenueDto } from '../lib/api';
+import { api, courseTypeLabel, uiToCourseType, type CourseType, type VenueDto } from '../lib/api';
+import { Pagination } from '../components/ui/Pagination';
+import { usePagination } from '../hooks/usePagination';
 
 type UiVenue = {
   id: number;
@@ -44,6 +46,11 @@ export function Venues() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { page, size, setPage, setSize, resetPage } = usePagination(20);
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [cities, setCities] = useState<string[]>([]);
+  const [venueTypes, setVenueTypes] = useState<CourseType[]>([]);
 
   const card = `rounded-2xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} shadow-sm`;
   const inputCls = `w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-800'}`;
@@ -61,8 +68,16 @@ export function Venues() {
     if (!activeWorkspace) return;
     setLoading(true);
     try {
-      const data = await api.venues.listAll(activeWorkspace);
-      setVenues(data.map(mapVenue));
+      const data = await api.venues.list(activeWorkspace, {
+        page,
+        size,
+        search,
+        city: filterCity,
+        type: filterType ? uiToCourseType(filterType) : undefined,
+      });
+      setVenues(data.content.map(mapVenue));
+      setTotalElements(data.totalElements);
+      setTotalPages(data.totalPages || 1);
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Failed to load venues');
     } finally {
@@ -72,15 +87,20 @@ export function Venues() {
 
   useEffect(() => {
     void loadVenues();
+  }, [activeWorkspace, page, size, search, filterCity, filterType]);
+
+  useEffect(() => {
+    if (!activeWorkspace) return;
+    api.venues.filterOptions(activeWorkspace)
+      .then((options) => {
+        setCities(options.cities);
+        setVenueTypes(options.types);
+      })
+      .catch(() => {
+        setCities([]);
+        setVenueTypes([]);
+      });
   }, [activeWorkspace]);
-
-  const filtered = useMemo(() => venues.filter((v) =>
-    (v.name.toLowerCase().includes(search.toLowerCase()) || v.nameEn.toLowerCase().includes(search.toLowerCase())) &&
-    (!filterCity || v.city === filterCity) &&
-    (!filterType || v.type === filterType)
-  ), [filterCity, filterType, search, venues]);
-
-  const cities = [...new Set(venues.map((v) => v.city).filter(Boolean))];
 
   const openCreate = () => {
     setSelected(null);
@@ -149,7 +169,7 @@ export function Venues() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{t('القاعات', 'Venues', lang)}</h1>
-          <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t(`${venues.length} قاعة`, `${venues.length} venues`, lang)}</p>
+          <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t(`${totalElements} قاعة`, `${totalElements} venues`, lang)}</p>
         </div>
         <button onClick={openCreate} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium">
           <Plus size={16} /> {t('قاعة جديدة', 'New Venue', lang)}
@@ -159,15 +179,18 @@ export function Venues() {
       <div className={`${card} p-4 flex flex-wrap gap-3`}>
         <div className={`flex items-center gap-2 flex-1 min-w-[200px] rounded-xl border px-3 py-2 ${isDark ? 'bg-slate-700 border-slate-600' : 'bg-slate-50 border-slate-200'}`}>
           <Search size={14} className="text-slate-400" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('بحث...', 'Search...', lang)} className="bg-transparent outline-none text-sm flex-1" />
+          <input value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} placeholder={t('بحث...', 'Search...', lang)} className="bg-transparent outline-none text-sm flex-1" />
         </div>
-        <select value={filterCity} onChange={(e) => setFilterCity(e.target.value)} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>
+        <select value={filterCity} onChange={(e) => { setFilterCity(e.target.value); resetPage(); }} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>
           <option value="">{t('كل المدن', 'All Cities', lang)}</option>
           {cities.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>
+        <select value={filterType} onChange={(e) => { setFilterType(e.target.value); resetPage(); }} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>
           <option value="">{t('كل الأنواع', 'All Types', lang)}</option>
-          {['In-person', 'Online', 'External'].map((tp) => <option key={tp} value={tp}>{tp === 'In-person' ? t('حضوري', 'In-person', lang) : tp === 'Online' ? t('أونلاين', 'Online', lang) : t('خارجي', 'External', lang)}</option>)}
+          {(venueTypes.length ? venueTypes : ['IN_PERSON', 'ONLINE', 'EXTERNAL'] as CourseType[]).map((type) => {
+            const label = courseTypeLabel(type);
+            return <option key={type} value={label}>{label === 'In-person' ? t('حضوري', 'In-person', lang) : label === 'Online' ? t('أونلاين', 'Online', lang) : t('خارجي', 'External', lang)}</option>;
+          })}
         </select>
       </div>
 
@@ -175,15 +198,15 @@ export function Venues() {
         <div className="flex items-center justify-center min-h-[300px]">
           <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
         </div>
-      ) : filtered.length === 0 ? (
+      ) : venues.length === 0 ? (
         <div className={`text-center py-16 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-          {venues.length === 0
+          {totalElements === 0 && !search && !filterCity && !filterType
             ? t('لا توجد قاعات بعد. اضف قاعة جديدة', 'No venues yet. Add a new venue.', lang)
             : t('لا توجد قاعات تطابق الفلتر', 'No venues match the current filters', lang)}
         </div>
       ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {filtered.map((venue) => (
+        {venues.map((venue) => (
           <div key={venue.id} className={`${card} p-5 hover:shadow-md transition-shadow`}>
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-3">
@@ -207,6 +230,12 @@ export function Venues() {
           </div>
         ))}
       </div>
+      )}
+
+      {!loading && venues.length > 0 && (
+        <div className={card}>
+          <Pagination page={page} size={size} totalElements={totalElements} totalPages={totalPages} onPageChange={setPage} onSizeChange={setSize} lang={lang} isDark={isDark} loading={loading} />
+        </div>
       )}
 
       {showDrawer && form && (
