@@ -3,13 +3,13 @@ import { cachedRequest, clearApiCache, invalidateCache, type CacheOptions } from
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
 const TTL = {
-  dashboard: 30_000,
-  workspaceList: 60_000,
-  list: 30_000,
-  listAll: 60_000,
-  filterOptions: 300_000,
-  calendar: 60_000,
-  assignments: 30_000,
+  dashboard: 90_000,
+  workspaceList: 180_000,
+  list: 90_000,
+  listAll: 180_000,
+  filterOptions: 900_000,
+  calendar: 180_000,
+  assignments: 90_000,
 } as const;
 
 type ApiRequestInit = Omit<RequestInit, 'cache'> & { cache?: CacheOptions };

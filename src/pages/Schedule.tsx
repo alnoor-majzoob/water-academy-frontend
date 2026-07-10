@@ -65,7 +65,7 @@ export function Schedule() {
     trainerId: entry.trainerId,
     trainerName: entry.trainerName,
     venueId: entry.venueId ?? 0,
-    venueName: entry.venueName || '',
+    venueName: entry.venueName || t('عن بعد', 'Online', lang),
     city: entry.venueCity || '',
     startDate: entry.startDate,
     endDate: entry.endDate,
