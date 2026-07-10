@@ -117,6 +117,12 @@ export function Schedule() {
     void loadTableEntries();
   }, [activeWorkspace, view, page, size, filterStatus, filterCity, filterMonth, venues]);
 
+  useEffect(() => {
+    if (view === 'gantt' && filterMonth === '') {
+      setFilterMonth('0');
+    }
+  }, [filterMonth, view]);
+
   const filtered = useMemo(() => entries.filter((e) =>
     (!filterStatus || e.status === filterStatus) &&
     (!filterCity || e.city === filterCity) &&
@@ -224,7 +230,7 @@ export function Schedule() {
 
   const kanbanStatuses: UiStatus[] = ['Scheduled', 'Confirmed', 'Completed', 'Conflict'];
 
-  const ganttMonthIndex = filterMonth !== '' ? Number(filterMonth) : new Date().getMonth();
+  const ganttMonthIndex = filterMonth !== '' ? Number(filterMonth) : 0;
   const ganttYear = currentWorkspace?.year || new Date().getFullYear();
   const ganttDaysInMonth = new Date(ganttYear, ganttMonthIndex + 1, 0).getDate();
   const ganttDays = Array.from({ length: ganttDaysInMonth }, (_, i) => i + 1);
@@ -287,7 +293,7 @@ export function Schedule() {
           {cities.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
         <select value={filterMonth} onChange={(e) => { setFilterMonth(e.target.value); resetPage(); }} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>
-          <option value="">{t('كل الأشهر', 'All Months', lang)}</option>
+          {view !== 'gantt' && <option value="">{t('كل الأشهر', 'All Months', lang)}</option>}
           {months.map((m, i) => <option key={i} value={i}>{m}</option>)}
         </select>
         <div className={`flex items-center gap-1.5 ms-auto text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}><Filter size={14} />{view === 'table' ? tableTotalElements : view === 'gantt' ? ganttEntries.length : filtered.length} {t('نتيجة', 'results', lang)}</div>
