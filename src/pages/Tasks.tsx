@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp, t } from '../context/AppContext';
-import { Play, ChevronDown, ChevronUp, RefreshCw, Plus, CalendarRange } from 'lucide-react';
+import { ChevronDown, ChevronUp, RefreshCw, Plus, CalendarRange } from 'lucide-react';
 import { StatusChip } from '../components/ui/StatusChip';
 import { Modal } from '../components/ui/Modal';
 import { api, taskStatusLabel, type TaskDto } from '../lib/api';
@@ -79,32 +79,18 @@ export function Tasks() {
       }
     };
 
-    let step = 0;
     let timer: number;
 
     const schedule = () => {
-      const delay = step < 5 ? (step + 1) * 1000 : 5000;
-      step++;
       timer = window.setTimeout(async () => {
         await poll();
         schedule();
-      }, delay);
+      }, 1500);
     };
 
     schedule();
     return () => clearTimeout(timer);
   }, [tasks, activeWorkspace]);
-
-  const startTask = async (id: number) => {
-    if (!activeWorkspace) return;
-    try {
-      await api.tasks.start(activeWorkspace, id);
-      addToast('info', t('تم بدء المهمة', 'Task started', lang));
-      await loadTasks();
-    } catch (error) {
-      addToast('error', error instanceof Error ? error.message : 'Task start failed');
-    }
-  };
 
   const openScheduleDialog = () => setShowScheduleDialog(true);
 
@@ -187,7 +173,6 @@ export function Tasks() {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <StatusChip status={task.status} size="sm" />
-                    {task.status === 'Pending' && <button onClick={() => void startTask(task.id)} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-medium"><Play size={12} /> {t('تشغيل', 'Run', lang)}</button>}
                     <button onClick={() => setExpandedTask(expandedTask === task.id ? null : task.id)} className={`p-1.5 rounded-lg ${isDark ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-400 hover:bg-slate-100'}`}>{expandedTask === task.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
                   </div>
                 </div>
