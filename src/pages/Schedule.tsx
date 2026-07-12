@@ -3,7 +3,8 @@ import { useApp, t } from '../context/AppContext';
 import { Plus, CalendarRange, List, LayoutGrid, Filter, AlertTriangle, X, Check, Lock, Trash2, type LucideIcon } from 'lucide-react';
 import { StatusChip } from '../components/ui/StatusChip';
 import { Modal } from '../components/ui/Modal';
-import { api, scheduleStatusLabel, uiToScheduleStatus, type CourseDto, type ScheduleEntryDto, type TrainerDto, type VenueDto } from '../lib/api';
+import { api, scheduleStatusLabel, uiToScheduleStatus, type CourseDto, type ScheduleEntryDto, type TaskDto, type TrainerDto, type VenueDto } from '../lib/api';
+import type { CacheOptions } from '../lib/apiCache';
 import { Pagination } from '../components/ui/Pagination';
 import { usePagination } from '../hooks/usePagination';
 
@@ -35,6 +36,7 @@ export function Schedule() {
   const [loading, setLoading] = useState(false);
   const [loadingTable, setLoadingTable] = useState(false);
   const [loadingFormOptions, setLoadingFormOptions] = useState(false);
+  const [hasActiveScheduleTask, setHasActiveScheduleTask] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({ courseId: '', trainerId: '', venueId: '', startDate: '', endDate: '', notes: '' });
   const [pendingPayload, setPendingPayload] = useState<typeof form | null>(null);
@@ -74,6 +76,12 @@ export function Schedule() {
     notes: entry.conflictNotes || '',
   });
 
+  const isScheduleTask = (task: TaskDto) => task.type === 'NEW_SCHEDULE' || task.type === 'UPDATE_SCHEDULE';
+
+  const hasActiveTask = (taskRows: TaskDto[]) => taskRows.some(task =>
+    isScheduleTask(task) && (task.status === 'PENDING' || task.status === 'RUNNING')
+  );
+
   const loadFilterOptions = async () => {
     if (!activeWorkspace) return;
     try {
@@ -84,7 +92,7 @@ export function Schedule() {
     }
   };
 
-  const loadEntries = async (monthValue = filterMonth) => {
+  const loadEntries = async (monthValue = filterMonth, options?: CacheOptions) => {
     if (!activeWorkspace) return;
     setLoading(true);
     try {
@@ -92,7 +100,7 @@ export function Schedule() {
         page: 0,
         size: 500,
         ...scheduleParams(monthValue),
-      });
+      }, options);
       setEntries(data.content.map(mapEntry));
       setEntriesTotal(data.totalElements);
     } catch (error) {
@@ -102,7 +110,7 @@ export function Schedule() {
     }
   };
 
-  const loadTableEntries = async () => {
+  const loadTableEntries = async (options?: CacheOptions) => {
     if (!activeWorkspace) return;
     setLoadingTable(true);
     try {
@@ -110,7 +118,7 @@ export function Schedule() {
         page,
         size,
         ...scheduleParams(),
-      });
+      }, options);
       setTableEntries(data.content.map(mapEntry));
       setTableTotalElements(data.totalElements);
       setTableTotalPages(data.totalPages || 1);
@@ -143,6 +151,7 @@ export function Schedule() {
   useEffect(() => {
     setEntries([]);
     setTableEntries([]);
+    setHasActiveScheduleTask(false);
     setCourses([]);
     setTrainers([]);
     setVenues([]);
@@ -151,13 +160,54 @@ export function Schedule() {
 
   useEffect(() => {
     if (view !== 'table') return;
-    void loadTableEntries();
-  }, [activeWorkspace, view, page, size, filterStatus, filterCity, filterMonth]);
+    void loadTableEntries(hasActiveScheduleTask ? { force: true } : undefined);
+  }, [activeWorkspace, view, page, size, filterStatus, filterCity, filterMonth, hasActiveScheduleTask]);
 
   useEffect(() => {
     if (view === 'table') return;
-    void loadEntries(view === 'gantt' && filterMonth === '' ? '0' : filterMonth);
-  }, [activeWorkspace, view, filterStatus, filterCity, filterMonth]);
+    void loadEntries(view === 'gantt' && filterMonth === '' ? '0' : filterMonth, hasActiveScheduleTask ? { force: true } : undefined);
+  }, [activeWorkspace, view, filterStatus, filterCity, filterMonth, hasActiveScheduleTask]);
+
+  useEffect(() => {
+    if (!activeWorkspace) return;
+
+    let cancelled = false;
+    let timer: number;
+
+    const refreshCurrentView = async () => {
+      api.cache.invalidateSchedule(activeWorkspace);
+      api.cache.invalidateDashboard(activeWorkspace);
+      if (view === 'table') await loadTableEntries({ force: true });
+      else await loadEntries(view === 'gantt' && filterMonth === '' ? '0' : filterMonth, { force: true });
+    };
+
+    const checkTasks = async () => {
+      try {
+        const taskRows = await api.tasks.listAll(activeWorkspace);
+        if (cancelled) return;
+
+        const active = hasActiveTask(taskRows);
+        setHasActiveScheduleTask((wasActive) => {
+          if (wasActive && !active) void refreshCurrentView();
+          return active;
+        });
+
+        if (active) {
+          api.cache.invalidateSchedule(activeWorkspace);
+          api.cache.invalidateDashboard(activeWorkspace);
+          timer = window.setTimeout(checkTasks, 1500);
+        }
+      } catch {
+        if (hasActiveScheduleTask) timer = window.setTimeout(checkTasks, 1500);
+      }
+    };
+
+    void checkTasks();
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [activeWorkspace, view, page, size, filterStatus, filterCity, filterMonth, hasActiveScheduleTask]);
 
   useEffect(() => {
     if (showModal) void loadFormOptions();
