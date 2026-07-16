@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Modal } from '../ui/Modal';
-import { api, type MatchingProfileResult } from '../../lib/api';
+import { api, type MatchingProfileResult, type TrainerDto } from '../../lib/api';
 import { Upload, Loader2 } from 'lucide-react';
 
 interface CvUploadModalProps {
@@ -14,15 +14,26 @@ export function CvUploadModal({ open, onClose, workspaceId }: CvUploadModalProps
   const { lang, theme, addToast } = useApp();
   const isDark = theme === 'dark';
   const [trainerId, setTrainerId] = useState('');
+  const [trainers, setTrainers] = useState<TrainerDto[]>([]);
+  const [loadingTrainers, setLoadingTrainers] = useState(false);
   const [provider, setProvider] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<MatchingProfileResult | null>(null);
 
+  useEffect(() => {
+    if (!open) return;
+    setLoadingTrainers(true);
+    api.trainers.listAll(workspaceId)
+      .then(setTrainers)
+      .catch(() => addToast('error', lang === 'ar' ? 'فشل تحميل المدربين' : 'Failed to load trainers'))
+      .finally(() => setLoadingTrainers(false));
+  }, [open, workspaceId]);
+
   const handleAnalyze = async () => {
-    if (!file || !trainerId.trim()) {
-      addToast('error', lang === 'ar' ? 'يرجى إدخال معرف المدرب واختيار ملف' : 'Enter trainer ID and select a file');
+    if (!file || !trainerId) {
+      addToast('error', lang === 'ar' ? 'يرجى اختيار المدرب واختيار ملف' : 'Select a trainer and choose a file');
       return;
     }
     setAnalyzing(true);
@@ -30,7 +41,7 @@ export function CvUploadModal({ open, onClose, workspaceId }: CvUploadModalProps
     try {
       const fd = new FormData();
       fd.append('cv', file);
-      fd.append('trainer_id', trainerId.trim());
+      fd.append('trainer_id', trainerId);
       fd.append('provider', provider);
       const data = await api.matching.analyzeCv(workspaceId, fd);
       setResult(data);
@@ -46,7 +57,7 @@ export function CvUploadModal({ open, onClose, workspaceId }: CvUploadModalProps
     setSaving(true);
     try {
       await api.matching.saveTrainer(workspaceId, {
-        trainer_id: trainerId.trim(),
+        trainer_id: trainerId,
         profile: result.profile,
         cv_text: result.cvText,
         cv_filename: result.cvFilename,
@@ -75,15 +86,25 @@ export function CvUploadModal({ open, onClose, workspaceId }: CvUploadModalProps
       <div className="space-y-4">
         <div>
           <label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-            {lang === 'ar' ? 'معرف المدرب' : 'Trainer ID'}
+            {lang === 'ar' ? 'المدرب' : 'Trainer'}
           </label>
-          <input
+          <select
             value={trainerId}
             onChange={(e) => setTrainerId(e.target.value)}
             className={inputCls}
-            placeholder={lang === 'ar' ? 'أدخل معرف المدرب' : 'Enter trainer ID'}
-            disabled={analyzing}
-          />
+            disabled={analyzing || loadingTrainers}
+          >
+            <option value="" disabled>
+              {loadingTrainers
+                ? (lang === 'ar' ? 'جاري التحميل...' : 'Loading...')
+                : (lang === 'ar' ? 'اختر المدرب' : 'Select a trainer')}
+            </option>
+            {trainers.map((t) => (
+              <option key={t.id} value={String(t.id)}>
+                {t.name}{t.externalId ? ` (${t.externalId})` : ''}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>
@@ -114,9 +135,9 @@ export function CvUploadModal({ open, onClose, workspaceId }: CvUploadModalProps
 
         <button
           onClick={handleAnalyze}
-          disabled={!file || !trainerId.trim() || analyzing}
+          disabled={!file || !trainerId || analyzing}
           className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-            !file || !trainerId.trim() || analyzing
+            !file || !trainerId || analyzing
               ? 'bg-blue-400 cursor-not-allowed text-white'
               : 'bg-blue-600 hover:bg-blue-700 text-white'
           }`}

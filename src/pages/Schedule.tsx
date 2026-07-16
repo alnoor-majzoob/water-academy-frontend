@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp, t } from '../context/AppContext';
-import { Plus, CalendarRange, List, LayoutGrid, Filter, AlertTriangle, X, Check, Lock, Trash2, type LucideIcon } from 'lucide-react';
+import { Plus, CalendarRange, List, LayoutGrid, Filter, AlertTriangle, Check, Lock, Trash2, type LucideIcon } from 'lucide-react';
 import { StatusChip } from '../components/ui/StatusChip';
 import { Modal } from '../components/ui/Modal';
 import { api, scheduleStatusLabel, uiToScheduleStatus, type CourseDto, type ScheduleEntryDto, type TaskDto, type TrainerDto, type VenueDto } from '../lib/api';
@@ -10,6 +10,23 @@ import { usePagination } from '../hooks/usePagination';
 
 type ViewType = 'gantt' | 'table' | 'kanban';
 type UiStatus = 'Scheduled' | 'Confirmed' | 'Completed' | 'Conflict';
+
+interface UiScheduleEntry {
+  id: number;
+  courseId: number;
+  courseName: string;
+  courseNameEn: string;
+  trainerId: number;
+  trainerName: string;
+  venueId: number;
+  venueName: string;
+  city: string;
+  startDate: string;
+  endDate: string;
+  status: UiStatus;
+  hasConflict: boolean;
+  notes: string;
+}
 
 export function Schedule() {
   const { lang, theme, addToast, activeWorkspace, currentWorkspace } = useApp();
@@ -381,7 +398,7 @@ export function Schedule() {
         <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); resetPage(); }} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>
           <option value="">{t('كل الحالات', 'All Statuses', lang)}</option>
           {['Scheduled','Confirmed','Completed','Conflict'].map((s) => (
-            <option key={s} value={s}>{t({ Scheduled: 'مجدول', Confirmed: 'مؤكد', Completed: 'منتهي', Conflict: 'تعارض' }[s], s, lang)}</option>
+            <option key={s} value={s}>{t(({ Scheduled: 'مجدول', Confirmed: 'مؤكد', Completed: 'منتهي', Conflict: 'تعارض' } as Record<string, string>)[s], s, lang)}</option>
           ))}
         </select>
         <select value={filterCity} onChange={(e) => { setFilterCity(e.target.value); resetPage(); }} className={`rounded-xl border px-3 py-2 text-sm outline-none ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200'}`}>

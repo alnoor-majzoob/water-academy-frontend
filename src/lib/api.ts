@@ -342,7 +342,7 @@ function invalidateTasks(workspaceId: number) {
   invalidateCache(`/api/workspaces/${workspaceId}/tasks`);
 }
 
-async function mutate<T>(path: string, init: RequestInit, after?: () => void): Promise<T> {
+async function mutate<T>(path: string, init: ApiRequestInit, after?: () => void): Promise<T> {
   const data = await request<T>(path, init);
   after?.();
   return data;
