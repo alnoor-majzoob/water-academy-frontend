@@ -94,9 +94,21 @@ export function CvUploadModal({ open, onClose, workspaceId }: CvUploadModalProps
   return (
     <Modal
       open={open}
-      onClose={() => { if (!analyzing && !saving) onClose(); }}
+      onClose={() => {
+        if (!analyzing && !saving) {
+          setTrainerId('');
+          setProvider('');
+          setFile(null);
+          setAnalyzing(false);
+          setSaving(false);
+          setResult(null);
+          setTrainers([]);
+          setLoadingTrainers(false);
+          onClose();
+        }
+      }}
       maxWidth="max-w-lg"
-      scrollable
+      scrollable={!!result}
       title={lang === 'ar' ? 'رفع السيرة الذاتية' : 'Upload CV'}
     >
       <div className="space-y-4">
@@ -108,7 +120,7 @@ export function CvUploadModal({ open, onClose, workspaceId }: CvUploadModalProps
             value={trainerId}
             onChange={(e) => setTrainerId(e.target.value)}
             className={inputCls}
-            disabled={analyzing || loadingTrainers}
+            disabled={analyzing || loadingTrainers || result}
           >
             <option value="" disabled>
               {loadingTrainers
@@ -132,7 +144,7 @@ export function CvUploadModal({ open, onClose, workspaceId }: CvUploadModalProps
             accept=".pdf,.docx,.doc,.txt"
             onChange={(e) => setFile(e.target.files?.[0] || null)}
             className={inputCls}
-            disabled={analyzing}
+            disabled={analyzing || result}
           />
         </div>
 
@@ -145,7 +157,7 @@ export function CvUploadModal({ open, onClose, workspaceId }: CvUploadModalProps
             onChange={(e) => setProvider(e.target.value)}
             className={inputCls}
             placeholder="groq / ollama / local"
-            disabled={analyzing}
+            disabled={analyzing || result}
           />
         </div>
 
