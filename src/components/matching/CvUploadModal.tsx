@@ -8,6 +8,7 @@ interface CvUploadModalProps {
   open: boolean;
   onClose: () => void;
   workspaceId: number;
+  defaultTrainerId?: string;
 }
 
 function formatValue(value: unknown): string {
@@ -25,7 +26,7 @@ function formatValue(value: unknown): string {
   return '—';
 }
 
-export function CvUploadModal({ open, onClose, workspaceId }: CvUploadModalProps) {
+export function CvUploadModal({ open, onClose, workspaceId, defaultTrainerId }: CvUploadModalProps) {
   const { lang, theme, addToast } = useApp();
   const isDark = theme === 'dark';
   const [trainerId, setTrainerId] = useState('');
@@ -41,10 +42,13 @@ export function CvUploadModal({ open, onClose, workspaceId }: CvUploadModalProps
     if (!open) return;
     setLoadingTrainers(true);
     api.trainers.listAll(workspaceId)
-      .then(setTrainers)
+      .then((list) => {
+        setTrainers(list);
+        if (defaultTrainerId) setTrainerId(defaultTrainerId);
+      })
       .catch(() => addToast('error', lang === 'ar' ? 'فشل تحميل المدربين' : 'Failed to load trainers'))
       .finally(() => setLoadingTrainers(false));
-  }, [open, workspaceId]);
+  }, [open, workspaceId, defaultTrainerId]);
 
   const handleAnalyze = async () => {
     if (!file || !trainerId) {

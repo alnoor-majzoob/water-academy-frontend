@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useApp, t } from '../context/AppContext';
-import { Plus, Search, Edit2, Trash2, X, MapPin, Eye } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, MapPin, Eye, Upload } from 'lucide-react';
 import { api, type TrainerDto, type MatchingTrainerDetail } from '../lib/api';
+import { CvUploadModal } from '../components/matching/CvUploadModal';
 import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { usePagination } from '../hooks/usePagination';
@@ -19,6 +20,7 @@ type UiTrainer = {
   maxConsecutiveDays: number;
   costPerDay: number;
   notes: string;
+  cvAnalyzed: boolean;
 };
 
 const mapTrainer = (trainer: TrainerDto): UiTrainer => ({
@@ -34,6 +36,7 @@ const mapTrainer = (trainer: TrainerDto): UiTrainer => ({
   maxConsecutiveDays: trainer.maxConsecutiveDays || 0,
   costPerDay: trainer.costPerDay || 0,
   notes: trainer.notes || '',
+  cvAnalyzed: trainer.cvAnalyzed,
 });
 
 export function Trainers() {
@@ -51,6 +54,7 @@ export function Trainers() {
   const [loading, setLoading] = useState(false);
   const [viewingProfile, setViewingProfile] = useState<MatchingTrainerDetail | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const [cvUploadTrainerId, setCvUploadTrainerId] = useState<string | null>(null);
   const { page, size, setPage, setSize, resetPage } = usePagination(20);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -260,8 +264,13 @@ export function Trainers() {
                 <button onClick={() => openEdit(trainer)} className={`flex-1 py-1.5 text-xs font-medium rounded-lg border transition-colors ${isDark ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
                   <Edit2 size={12} className="inline me-1" />{t('تعديل', 'Edit', lang)}
                 </button>
+                {trainer.cvAnalyzed && (
                 <button onClick={() => void handleViewProfile(String(trainer.id))} className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${isDark ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`} title={t('عرض الملف', 'View Profile', lang)}>
                   <Eye size={12} />
+                </button>
+                )}
+                <button onClick={() => setCvUploadTrainerId(String(trainer.id))} className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${isDark ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`} title={t('رفع سيرة ذاتية', 'Upload CV', lang)}>
+                  <Upload size={12} />
                 </button>
                 <button onClick={() => void handleDelete(trainer.id)} className="px-3 py-1.5 text-xs font-medium rounded-lg text-red-500 hover:bg-red-50 border border-red-200">
                   <Trash2 size={12} />
@@ -378,6 +387,13 @@ export function Trainers() {
           </div>
         ) : null}
       </Modal>
+
+      <CvUploadModal
+        open={cvUploadTrainerId !== null}
+        onClose={() => setCvUploadTrainerId(null)}
+        workspaceId={activeWorkspace}
+        defaultTrainerId={cvUploadTrainerId ?? undefined}
+      />
     </div>
   );
 }
