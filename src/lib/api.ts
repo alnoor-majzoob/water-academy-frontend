@@ -113,6 +113,7 @@ export interface TrainerDto {
   maxConsecutiveDays: number | null;
   costPerDay: number | null;
   notes: string | null;
+  cvAnalyzed: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -216,6 +217,11 @@ export interface MatchingTrainer {
   fullName: string;
   profile: Record<string, unknown>;
   createdAt: string;
+}
+
+export interface MatchingTrainerDetail extends MatchingTrainer {
+  cvText: string;
+  cvFilename: string;
 }
 
 export interface MatchingPlanDto {
@@ -551,6 +557,8 @@ export const api = {
       mutate<Record<string, unknown>>(`/api/workspaces/${workspaceId}/matching/trainers`, { method: 'POST', body: JSON.stringify(body) }),
     listTrainers: (workspaceId: number) =>
       request<Record<string, unknown>>(`/api/workspaces/${workspaceId}/matching/trainers`),
+    getTrainerByTrainerId: (workspaceId: number, trainerId: string) =>
+      request<MatchingTrainerDetail>(`/api/workspaces/${workspaceId}/matching/trainers/by-trainer-id/${trainerId}`),
     deleteTrainer: (workspaceId: number, id: number) =>
       mutate<Record<string, unknown>>(`/api/workspaces/${workspaceId}/matching/trainers/${id}`, { method: 'DELETE' }),
     recommend: (workspaceId: number, body: Record<string, unknown>) =>

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useApp, t } from '../context/AppContext';
-import { Plus, Search, Edit2, Trash2, X, MapPin } from 'lucide-react';
-import { api, type TrainerDto } from '../lib/api';
+import { Plus, Search, Edit2, Trash2, X, MapPin, Eye } from 'lucide-react';
+import { api, type TrainerDto, type MatchingTrainerDetail } from '../lib/api';
+import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { usePagination } from '../hooks/usePagination';
 
@@ -48,6 +49,8 @@ export function Trainers() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [viewingProfile, setViewingProfile] = useState<MatchingTrainerDetail | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
   const { page, size, setPage, setSize, resetPage } = usePagination(20);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -150,6 +153,20 @@ export function Trainers() {
     }
   };
 
+  const handleViewProfile = async (trainerId: string) => {
+    if (!activeWorkspace) return;
+    setLoadingProfile(true);
+    setViewingProfile(null);
+    try {
+      const data = await api.matching.getTrainerByTrainerId(activeWorkspace, trainerId);
+      setViewingProfile(data);
+    } catch {
+      addToast('error', t('لا يوجد ملف تعريف للمدرب', 'No profile found for this trainer', lang));
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
   const handleDelete = async (id: number) => {
     if (!activeWorkspace) return;
     try {
@@ -243,6 +260,9 @@ export function Trainers() {
                 <button onClick={() => openEdit(trainer)} className={`flex-1 py-1.5 text-xs font-medium rounded-lg border transition-colors ${isDark ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
                   <Edit2 size={12} className="inline me-1" />{t('تعديل', 'Edit', lang)}
                 </button>
+                <button onClick={() => void handleViewProfile(String(trainer.id))} className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${isDark ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`} title={t('عرض الملف', 'View Profile', lang)}>
+                  <Eye size={12} />
+                </button>
                 <button onClick={() => void handleDelete(trainer.id)} className="px-3 py-1.5 text-xs font-medium rounded-lg text-red-500 hover:bg-red-50 border border-red-200">
                   <Trash2 size={12} />
                 </button>
@@ -322,6 +342,57 @@ export function Trainers() {
           </div>
         </div>
       )}
+
+      <Modal open={loadingProfile || viewingProfile !== null} onClose={() => { if (!loadingProfile) setViewingProfile(null); }} maxWidth="max-w-lg" scrollable title={t('الملف التعريفي للمدرب', 'Trainer Profile', lang)}>
+        {loadingProfile ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="w-6 h-6 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : viewingProfile ? (
+          <div className="space-y-3">
+            <div className={`flex items-center gap-3 pb-3 border-b ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold shadow">
+                {(viewingProfile.fullName || 'T').charAt(0)}
+              </div>
+              <div>
+                <p className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{viewingProfile.fullName}</p>
+                <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t('معرف', 'ID', lang)}: {viewingProfile.trainerId}</p>
+              </div>
+            </div>
+            {viewingProfile.profile && Object.keys(viewingProfile.profile).length > 0 && (
+              <div className="space-y-2">
+                {Object.entries(viewingProfile.profile)
+                  .filter(([key]) => !/^name$/i.test(key) && key !== 'trainer_id' && key !== 'full_name')
+                  .map(([key, value]) => (
+                    <div key={key} className="flex items-start gap-2">
+                      <span className={`text-xs font-medium min-w-[100px] capitalize ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        {key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]/g, ' ')}
+                      </span>
+                      <span className={`text-xs flex-1 ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+                        {formatProfileValue(value)}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        ) : null}
+      </Modal>
     </div>
   );
+}
+
+function formatProfileValue(value: unknown): string {
+  if (value === null || value === undefined) return '—';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) {
+    return value.map(v => formatProfileValue(v)).join(', ');
+  }
+  if (typeof value === 'object') {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([k, v]) => `${k}: ${formatProfileValue(v)}`)
+      .join('; ');
+  }
+  return '—';
 }
