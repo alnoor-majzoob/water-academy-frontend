@@ -180,6 +180,53 @@ export interface TaskDto {
   updatedAt: string;
 }
 
+export interface MatchingRecommendedTrainer {
+  trainerId: number;
+  trainerNumber: string;
+  trainerName: string;
+  jobTitle: string;
+  score: number;
+  localScore: number;
+  aiScore: number | null;
+  matchMethod: string;
+  fitLevel: string | null;
+  reasons: string[];
+  risks: string[];
+  topics: string[];
+}
+
+export interface MatchingRecommendationResult {
+  ok: boolean;
+  planId: number;
+  recommendedTrainers: MatchingRecommendedTrainer[];
+  proposal: { trainerId: number | null };
+  matching: { enabled: boolean; used: boolean; provider: string; model: string; durationMs: number };
+}
+
+export interface MatchingProfileResult {
+  profile: Record<string, unknown>;
+  cvText: string;
+  cvFilename: string;
+  ai: { provider: string; model: string; durationMs: number };
+}
+
+export interface MatchingTrainer {
+  id: number;
+  trainerId: string;
+  fullName: string;
+  profile: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface MatchingPlanDto {
+  id: number;
+  courseName: string;
+  courseDesc: string;
+  attendees: number;
+  assignedTrainerId: number | null;
+  createdAt: string;
+}
+
 export interface ImportResultDto {
   coursesParsed: number;
   coursesInserted: number;
@@ -492,6 +539,26 @@ export const api = {
     if (params?.type) query.set('type', params.type);
     const qs = query.toString();
     return download(`/api/workspaces/${workspaceId}/export${qs ? '?' + qs : ''}`);
+  },
+  matching: {
+    health: (workspaceId: number) =>
+      request<Record<string, unknown>>(`/api/workspaces/${workspaceId}/matching/health`),
+    settings: (workspaceId: number) =>
+      request<Record<string, unknown>>(`/api/workspaces/${workspaceId}/matching/settings`),
+    analyzeCv: (workspaceId: number, formData: FormData) =>
+      mutate<MatchingProfileResult>(`/api/workspaces/${workspaceId}/matching/trainers/analyze`, { method: 'POST', body: formData }),
+    saveTrainer: (workspaceId: number, body: Record<string, unknown>) =>
+      mutate<Record<string, unknown>>(`/api/workspaces/${workspaceId}/matching/trainers`, { method: 'POST', body: JSON.stringify(body) }),
+    listTrainers: (workspaceId: number) =>
+      request<Record<string, unknown>>(`/api/workspaces/${workspaceId}/matching/trainers`),
+    deleteTrainer: (workspaceId: number, id: number) =>
+      mutate<Record<string, unknown>>(`/api/workspaces/${workspaceId}/matching/trainers/${id}`, { method: 'DELETE' }),
+    recommend: (workspaceId: number, body: Record<string, unknown>) =>
+      mutate<MatchingRecommendationResult>(`/api/workspaces/${workspaceId}/matching/recommendations`, { method: 'POST', body: JSON.stringify(body) }),
+    assignTrainer: (workspaceId: number, planId: number, body: Record<string, unknown>) =>
+      mutate<Record<string, unknown>>(`/api/workspaces/${workspaceId}/matching/course-plans/${planId}/assign`, { method: 'POST', body: JSON.stringify(body) }),
+    listPlans: (workspaceId: number) =>
+      request<Record<string, unknown>>(`/api/workspaces/${workspaceId}/matching/course-plans`),
   },
 };
 

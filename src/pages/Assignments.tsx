@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useApp, t } from '../context/AppContext';
-import { Plus, X, AlertCircle } from 'lucide-react';
+import { Plus, X, AlertCircle, Sparkles, FileUp } from 'lucide-react';
 import { Modal } from '../components/ui/Modal';
 import { api, type AssignmentDto, type CourseDto, type TrainerDto } from '../lib/api';
+import { MatchingStatusBadge } from '../components/matching/MatchingStatusBadge';
+import { RecommendationsPanel } from '../components/matching/RecommendationsPanel';
+import { CvUploadModal } from '../components/matching/CvUploadModal';
 import { Pagination } from '../components/ui/Pagination';
 import { usePagination } from '../hooks/usePagination';
 
@@ -32,6 +35,8 @@ export function Assignments() {
   const [loading, setLoading] = useState(false);
   const [courses, setCourses] = useState<CourseDto[]>([]);
   const [trainers, setTrainers] = useState<TrainerDto[]>([]);
+  const [showAiMatch, setShowAiMatch] = useState(false);
+  const [showCvUpload, setShowCvUpload] = useState(false);
   const { page, size, setPage, setSize, resetPage } = usePagination(20);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -136,11 +141,14 @@ export function Assignments() {
           <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t(`${totalElements} تعيين`, `${totalElements} assignments`, lang)}</p>
         </div>
         <div className="flex items-center gap-2">
+          {activeWorkspace !== 0 && <MatchingStatusBadge workspaceId={activeWorkspace} />}
           <div className={`flex rounded-xl border p-1 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white'}`}>
             {(['table', 'matrix'] as const).map((v) => (
               <button key={v} onClick={() => setView(v)} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${view === v ? 'bg-blue-600 text-white' : (isDark ? 'text-slate-400' : 'text-slate-500')}`}>{v === 'table' ? t('جدول', 'Table', lang) : t('مصفوفة', 'Matrix', lang)}</button>
             ))}
           </div>
+          <button onClick={() => setShowCvUpload(true)} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium"><FileUp size={16} /> {t('رفع سيرة', 'Upload CV', lang)}</button>
+          <button onClick={() => setShowAiMatch(true)} className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-medium"><Sparkles size={16} /> {t('مطابقة AI', 'AI Match', lang)}</button>
           <button onClick={() => setShowModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium"><Plus size={16} /> {t('تعيين جديد', 'New Assignment', lang)}</button>
         </div>
       </div>
@@ -238,6 +246,20 @@ export function Assignments() {
         </div>
       )}
       </>)}
+
+      <RecommendationsPanel
+        open={showAiMatch}
+        onClose={() => setShowAiMatch(false)}
+        workspaceId={activeWorkspace}
+        courses={courses}
+        onAssigned={() => loadData()}
+      />
+
+      <CvUploadModal
+        open={showCvUpload}
+        onClose={() => setShowCvUpload(false)}
+        workspaceId={activeWorkspace}
+      />
 
       <Modal open={showModal} onClose={() => setShowModal(false)} maxWidth="max-w-md" title={t('إضافة تعيين', 'Add Assignment', lang)}>
         <div className="space-y-4">
