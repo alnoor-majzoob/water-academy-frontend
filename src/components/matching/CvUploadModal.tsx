@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Modal } from '../ui/Modal';
-import { api, type MatchingProfileResult, type TrainerDto } from '../../lib/api';
+import { api, type MatchingProfileResult } from '../../lib/api';
 import { Upload, Loader2 } from 'lucide-react';
 
 interface CvUploadModalProps {
   open: boolean;
   onClose: () => void;
   workspaceId: number;
-  defaultTrainerId?: string;
+  defaultTrainerId: string;
 }
 
 function formatValue(value: unknown): string {
@@ -29,30 +29,15 @@ function formatValue(value: unknown): string {
 export function CvUploadModal({ open, onClose, workspaceId, defaultTrainerId }: CvUploadModalProps) {
   const { lang, theme, addToast } = useApp();
   const isDark = theme === 'dark';
-  const [trainerId, setTrainerId] = useState('');
-  const [trainers, setTrainers] = useState<TrainerDto[]>([]);
-  const [loadingTrainers, setLoadingTrainers] = useState(false);
   const [provider, setProvider] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<MatchingProfileResult | null>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    setLoadingTrainers(true);
-    api.trainers.listAll(workspaceId)
-      .then((list) => {
-        setTrainers(list);
-        if (defaultTrainerId) setTrainerId(defaultTrainerId);
-      })
-      .catch(() => addToast('error', lang === 'ar' ? 'فشل تحميل المدربين' : 'Failed to load trainers'))
-      .finally(() => setLoadingTrainers(false));
-  }, [open, workspaceId, defaultTrainerId]);
-
   const handleAnalyze = async () => {
-    if (!file || !trainerId) {
-      addToast('error', lang === 'ar' ? 'يرجى اختيار المدرب واختيار ملف' : 'Select a trainer and choose a file');
+    if (!file) {
+      addToast('error', lang === 'ar' ? 'يرجى اختيار ملف' : 'Select a file');
       return;
     }
     setAnalyzing(true);
@@ -60,7 +45,7 @@ export function CvUploadModal({ open, onClose, workspaceId, defaultTrainerId }: 
     try {
       const fd = new FormData();
       fd.append('cv', file);
-      fd.append('trainer_id', trainerId);
+      fd.append('trainer_id', defaultTrainerId);
       fd.append('provider', provider);
       const data = await api.matching.analyzeCv(workspaceId, fd);
       setResult(data);
@@ -76,7 +61,7 @@ export function CvUploadModal({ open, onClose, workspaceId, defaultTrainerId }: 
     setSaving(true);
     try {
       await api.matching.saveTrainer(workspaceId, {
-        trainer_id: trainerId,
+        trainer_id: defaultTrainerId,
         profile: result.profile,
         cv_text: result.cvText,
         cv_filename: result.cvFilename,
@@ -84,7 +69,6 @@ export function CvUploadModal({ open, onClose, workspaceId, defaultTrainerId }: 
       addToast('success', lang === 'ar' ? 'تم حفظ المدرب' : 'Trainer saved');
       setResult(null);
       setFile(null);
-      setTrainerId('');
       onClose();
     } catch (error) {
       addToast('error', error instanceof Error ? error.message : 'Save failed');
@@ -100,14 +84,11 @@ export function CvUploadModal({ open, onClose, workspaceId, defaultTrainerId }: 
       open={open}
       onClose={() => {
         if (!analyzing && !saving) {
-          setTrainerId('');
           setProvider('');
           setFile(null);
           setAnalyzing(false);
           setSaving(false);
           setResult(null);
-          setTrainers([]);
-          setLoadingTrainers(false);
           onClose();
         }
       }}
@@ -116,29 +97,6 @@ export function CvUploadModal({ open, onClose, workspaceId, defaultTrainerId }: 
       title={lang === 'ar' ? 'رفع السيرة الذاتية' : 'Upload CV'}
     >
       <div className="space-y-4">
-        <div>
-          <label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-            {lang === 'ar' ? 'المدرب' : 'Trainer'}
-          </label>
-          <select
-            value={trainerId}
-            onChange={(e) => setTrainerId(e.target.value)}
-            className={inputCls}
-            disabled={analyzing || loadingTrainers || result}
-          >
-            <option value="" disabled>
-              {loadingTrainers
-                ? (lang === 'ar' ? 'جاري التحميل...' : 'Loading...')
-                : (lang === 'ar' ? 'اختر المدرب' : 'Select a trainer')}
-            </option>
-            {trainers.map((t) => (
-              <option key={t.id} value={String(t.id)}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
         <div>
           <label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
             {lang === 'ar' ? 'ملف السيرة الذاتية (PDF, DOCX, TXT)' : 'CV File (PDF, DOCX, TXT)'}
@@ -167,9 +125,9 @@ export function CvUploadModal({ open, onClose, workspaceId, defaultTrainerId }: 
 
         <button
           onClick={handleAnalyze}
-          disabled={!file || !trainerId || analyzing}
+          disabled={!file || analyzing}
           className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-            !file || !trainerId || analyzing
+            !file || analyzing
               ? 'bg-blue-400 cursor-not-allowed text-white'
               : 'bg-blue-600 hover:bg-blue-700 text-white'
           }`}

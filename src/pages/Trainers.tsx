@@ -388,12 +388,14 @@ export function Trainers() {
         ) : null}
       </Modal>
 
-      <CvUploadModal
-        open={cvUploadTrainerId !== null}
-        onClose={() => setCvUploadTrainerId(null)}
-        workspaceId={activeWorkspace}
-        defaultTrainerId={cvUploadTrainerId ?? undefined}
-      />
+      {cvUploadTrainerId && (
+        <CvUploadModal
+          open
+          onClose={() => setCvUploadTrainerId(null)}
+          workspaceId={activeWorkspace}
+          defaultTrainerId={cvUploadTrainerId}
+        />
+      )}
     </div>
   );
 }
