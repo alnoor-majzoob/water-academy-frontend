@@ -8,9 +8,10 @@ interface ModalProps {
   title?: string;
   children: ReactNode;
   maxWidth?: string;
+  scrollable?: boolean;
 }
 
-export function Modal({ open, onClose, title, children, maxWidth = 'max-w-sm' }: ModalProps) {
+export function Modal({ open, onClose, title, children, maxWidth = 'max-w-sm', scrollable }: ModalProps) {
   const { theme } = useApp();
   const isDark = theme === 'dark';
 
@@ -32,7 +33,7 @@ export function Modal({ open, onClose, title, children, maxWidth = 'max-w-sm' }:
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className={`w-full ${maxWidth} rounded-2xl shadow-2xl p-6 ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
+      <div className={`w-full ${maxWidth} rounded-2xl shadow-2xl p-6 ${isDark ? 'bg-slate-800' : 'bg-white'} ${scrollable ? 'max-h-[85vh] overflow-y-auto' : ''}`}>
         {title && (
           <div className="flex items-center justify-between mb-5">
             <h2 className={`font-bold text-lg ${isDark ? 'text-white' : 'text-slate-800'}`}>{title}</h2>

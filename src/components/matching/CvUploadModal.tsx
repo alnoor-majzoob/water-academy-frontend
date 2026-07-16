@@ -10,6 +10,21 @@ interface CvUploadModalProps {
   workspaceId: number;
 }
 
+function formatValue(value: unknown): string {
+  if (value === null || value === undefined) return '—';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) {
+    return value.map(v => formatValue(v)).join(', ');
+  }
+  if (typeof value === 'object') {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([k, v]) => `${k}: ${formatValue(v)}`)
+      .join('; ');
+  }
+  return '—';
+}
+
 export function CvUploadModal({ open, onClose, workspaceId }: CvUploadModalProps) {
   const { lang, theme, addToast } = useApp();
   const isDark = theme === 'dark';
@@ -81,6 +96,7 @@ export function CvUploadModal({ open, onClose, workspaceId }: CvUploadModalProps
       open={open}
       onClose={() => { if (!analyzing && !saving) onClose(); }}
       maxWidth="max-w-lg"
+      scrollable
       title={lang === 'ar' ? 'رفع السيرة الذاتية' : 'Upload CV'}
     >
       <div className="space-y-4">
@@ -101,7 +117,7 @@ export function CvUploadModal({ open, onClose, workspaceId }: CvUploadModalProps
             </option>
             {trainers.map((t) => (
               <option key={t.id} value={String(t.id)}>
-                {t.name}{t.externalId ? ` (${t.externalId})` : ''}
+                {t.name}
               </option>
             ))}
           </select>
@@ -148,14 +164,23 @@ export function CvUploadModal({ open, onClose, workspaceId }: CvUploadModalProps
             : (lang === 'ar' ? 'تحليل السيرة الذاتية' : 'Analyze CV')}
         </button>
 
-        {result && (
-          <div className={`rounded-xl border p-3 space-y-2 ${isDark ? 'bg-slate-700/50 border-slate-600' : 'bg-slate-50 border-slate-200'}`}>
+        {result && result.profile && Object.keys(result.profile).length > 0 && (
+          <div className={`rounded-xl border p-3 space-y-2.5 ${isDark ? 'bg-slate-700/50 border-slate-600' : 'bg-slate-50 border-slate-200'}`}>
             <p className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-700'}`}>
               {lang === 'ar' ? 'الملف المستخرج' : 'Extracted Profile'}
             </p>
-            <pre className={`text-[11px] overflow-x-auto max-h-60 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-              {JSON.stringify(result.profile, null, 1)}
-            </pre>
+            {Object.entries(result.profile)
+              .filter(([key]) => !/^name$/i.test(key))
+              .map(([key, value]) => (
+                <div key={key} className="flex items-start gap-2">
+                  <span className={`text-xs font-medium min-w-[100px] capitalize ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]/g, ' ')}
+                  </span>
+                  <span className={`text-xs flex-1 ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+                    {formatValue(value)}
+                  </span>
+                </div>
+              ))}
           </div>
         )}
 
@@ -172,7 +197,7 @@ export function CvUploadModal({ open, onClose, workspaceId }: CvUploadModalProps
             {saving ? <Loader2 size={16} className="animate-spin" /> : null}
             {saving
               ? (lang === 'ar' ? 'جاري الحفظ...' : 'Saving...')
-              : (lang === 'ar' ? 'حفظ المدرب' : 'Save Trainer')}
+              : (lang === 'ar' ? 'حفظ تحليل السيرة الذاتية' : 'Save Trainer CV Analysis')}
           </button>
         )}
       </div>
