@@ -45,7 +45,7 @@ export function RecommendationsPanel({ open, onClose, workspaceId, courses, onAs
     if (!result || !selectedCourse) return;
     setAssigningId(trainer.trainerId);
     try {
-      await api.assignments.create(workspaceId, { trainerId: trainer.trainerId, courseId: selectedCourse.id });
+      await api.assignments.create(workspaceId, { trainerId: Number(trainer.trainerNumber), courseId: selectedCourse.id });
       await api.matching.assignTrainer(workspaceId, result.planId, {
         trainerId: trainer.trainerId,
         score: trainer.score,
