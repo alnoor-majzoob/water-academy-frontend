@@ -37,6 +37,7 @@ export function RecommendationsPanel({ open, onClose, workspaceId, courses, onAs
   const [result, setResult] = useState<MatchingRecommendationResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [assigningId, setAssigningId] = useState<number | null>(null);
+  const [topK, setTopK] = useState(5);
 
   const selectedCourse = courses.find((c) => c.id === courseId);
 
@@ -49,6 +50,7 @@ export function RecommendationsPanel({ open, onClose, workspaceId, courses, onAs
         courseName: selectedCourse.name,
         courseDesc: selectedCourse.specialization || selectedCourse.name,
         attendees: selectedCourse.expectedTrainees || 15,
+        topK,
         lang,
       });
       setResult(data);
@@ -82,7 +84,7 @@ export function RecommendationsPanel({ open, onClose, workspaceId, courses, onAs
   const inputCls = `w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-800'}`;
 
   return (
-    <Modal open={open} onClose={() => { setCourseId(0); setResult(null); setLoading(false); setAssigningId(null); onClose(); }} maxWidth="max-w-lg" title={lang === 'ar' ? 'مطابقة AI' : 'AI Match'}>
+    <Modal open={open} onClose={() => { setCourseId(0); setTopK(5); setResult(null); setLoading(false); setAssigningId(null); onClose(); }} maxWidth="max-w-lg" title={lang === 'ar' ? 'مطابقة AI' : 'AI Match'}>
       <div className="space-y-4">
         <div>
           <label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
@@ -94,6 +96,21 @@ export function RecommendationsPanel({ open, onClose, workspaceId, courses, onAs
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+            {lang === 'ar' ? 'عدد التوصيات' : 'Recommendations count'}
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={20}
+            value={topK}
+            onChange={(e) => setTopK(Math.min(20, Math.max(1, Number(e.target.value))))}
+            disabled={!!result || loading}
+            className={inputCls}
+          />
         </div>
 
         <button
