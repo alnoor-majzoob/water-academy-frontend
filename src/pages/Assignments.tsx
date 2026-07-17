@@ -3,7 +3,6 @@ import { useApp, t } from '../context/AppContext';
 import { Plus, X, AlertCircle, Sparkles } from 'lucide-react';
 import { Modal } from '../components/ui/Modal';
 import { api, type AssignmentDto, type CourseDto, type TrainerDto } from '../lib/api';
-import { MatchingStatusBadge } from '../components/matching/MatchingStatusBadge';
 import { RecommendationsPanel } from '../components/matching/RecommendationsPanel';
 import { Pagination } from '../components/ui/Pagination';
 import { usePagination } from '../hooks/usePagination';
@@ -139,7 +138,6 @@ export function Assignments() {
           <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t(`${totalElements} تعيين`, `${totalElements} assignments`, lang)}</p>
         </div>
         <div className="flex items-center gap-2">
-          {activeWorkspace !== 0 && <MatchingStatusBadge workspaceId={activeWorkspace} />}
           <div className={`flex rounded-xl border p-1 ${isDark ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white'}`}>
             {(['table', 'matrix'] as const).map((v) => (
               <button key={v} onClick={() => setView(v)} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${view === v ? 'bg-blue-600 text-white' : (isDark ? 'text-slate-400' : 'text-slate-500')}`}>{v === 'table' ? t('جدول', 'Table', lang) : t('مصفوفة', 'Matrix', lang)}</button>
