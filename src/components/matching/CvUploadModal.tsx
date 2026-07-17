@@ -9,6 +9,7 @@ interface CvUploadModalProps {
   onClose: () => void;
   workspaceId: number;
   defaultTrainerId: string;
+  trainerName: string;
 }
 
 function formatValue(value: unknown): string {
@@ -26,7 +27,7 @@ function formatValue(value: unknown): string {
   return '—';
 }
 
-export function CvUploadModal({ open, onClose, workspaceId, defaultTrainerId }: CvUploadModalProps) {
+export function CvUploadModal({ open, onClose, workspaceId, defaultTrainerId, trainerName }: CvUploadModalProps) {
   const { lang, theme, addToast } = useApp();
   const isDark = theme === 'dark';
   const [provider, setProvider] = useState('');
@@ -62,7 +63,7 @@ export function CvUploadModal({ open, onClose, workspaceId, defaultTrainerId }: 
     try {
       await api.matching.saveTrainer(workspaceId, {
         trainerId: defaultTrainerId,
-        profile: result.profile,
+        profile: { ...result.profile, full_name: trainerName },
         cvText: result.cvText,
         cvFilename: result.cvFilename,
       });

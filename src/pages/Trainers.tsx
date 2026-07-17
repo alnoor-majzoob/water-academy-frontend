@@ -54,7 +54,7 @@ export function Trainers() {
   const [loading, setLoading] = useState(false);
   const [viewingProfile, setViewingProfile] = useState<MatchingTrainerDetail | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
-  const [cvUploadTrainerId, setCvUploadTrainerId] = useState<string | null>(null);
+  const [cvUploadTrainer, setCvUploadTrainer] = useState<{ id: string; name: string } | null>(null);
   const { page, size, setPage, setSize, resetPage } = usePagination(20);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -269,7 +269,7 @@ export function Trainers() {
                   <Eye size={12} />
                 </button>
                 )}
-                <button onClick={() => setCvUploadTrainerId(String(trainer.id))} className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${isDark ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`} title={t('رفع سيرة ذاتية', 'Upload CV', lang)}>
+                <button onClick={() => setCvUploadTrainer({ id: String(trainer.id), name: trainer.name })} className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${isDark ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`} title={t('رفع سيرة ذاتية', 'Upload CV', lang)}>
                   <Upload size={12} />
                 </button>
                 <button onClick={() => void handleDelete(trainer.id)} className="px-3 py-1.5 text-xs font-medium rounded-lg text-red-500 hover:bg-red-50 border border-red-200">
@@ -388,12 +388,13 @@ export function Trainers() {
         ) : null}
       </Modal>
 
-      {cvUploadTrainerId && (
+      {cvUploadTrainer && (
         <CvUploadModal
           open
-          onClose={() => setCvUploadTrainerId(null)}
+          onClose={() => setCvUploadTrainer(null)}
           workspaceId={activeWorkspace}
-          defaultTrainerId={cvUploadTrainerId}
+          defaultTrainerId={cvUploadTrainer.id}
+          trainerName={cvUploadTrainer.name}
         />
       )}
     </div>
