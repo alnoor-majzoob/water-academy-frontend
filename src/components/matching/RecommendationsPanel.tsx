@@ -13,6 +13,14 @@ interface RecommendationsPanelProps {
   onAssigned: () => void;
 }
 
+const formatDuration = (ms: number, locale: string) => {
+  if (ms >= 1000) {
+    const s = ms / 1000;
+    return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 2, minimumFractionDigits: 2 }).format(s)}s`;
+  }
+  return `${new Intl.NumberFormat(locale).format(ms)}ms`;
+};
+
 export function RecommendationsPanel({ open, onClose, workspaceId, courses, onAssigned }: RecommendationsPanelProps) {
   const { lang, theme, addToast } = useApp();
   const isDark = theme === 'dark';
@@ -98,7 +106,7 @@ export function RecommendationsPanel({ open, onClose, workspaceId, courses, onAs
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {result.matching.durationMs != null && (
               <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                {lang === 'ar' ? 'زمن الاستجابة' : 'Response time'}: {result.matching.durationMs}ms
+                {lang === 'ar' ? 'زمن الاستجابة' : 'Response time'}: {formatDuration(result.matching.durationMs, lang === 'ar' ? 'ar-SA' : 'en-US')}
               </p>
             )}
             {result.recommendedTrainers.length === 0 ? (
