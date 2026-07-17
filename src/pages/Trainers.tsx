@@ -54,6 +54,7 @@ export function Trainers() {
   const [loading, setLoading] = useState(false);
   const [viewingProfile, setViewingProfile] = useState<MatchingTrainerDetail | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const [deletingProfile, setDeletingProfile] = useState(false);
   const [cvUploadTrainer, setCvUploadTrainer] = useState<{ id: string; name: string } | null>(null);
   const { page, size, setPage, setSize, resetPage } = usePagination(20);
   const [totalElements, setTotalElements] = useState(0);
@@ -168,6 +169,21 @@ export function Trainers() {
       addToast('error', t('لا يوجد ملف تعريف للمدرب', 'No profile found for this trainer', lang));
     } finally {
       setLoadingProfile(false);
+    }
+  };
+
+  const handleDeleteProfile = async () => {
+    if (!activeWorkspace || !viewingProfile) return;
+    setDeletingProfile(true);
+    try {
+      await api.matching.deleteTrainer(activeWorkspace, viewingProfile.id);
+      addToast('success', t('تم حذف الملف التعريفي', 'Profile deleted', lang));
+      setViewingProfile(null);
+      await loadTrainers();
+    } catch (error) {
+      addToast('error', error instanceof Error ? error.message : 'Delete failed');
+    } finally {
+      setDeletingProfile(false);
     }
   };
 
@@ -384,6 +400,20 @@ export function Trainers() {
                   ))}
               </div>
             )}
+            <button
+              onClick={() => void handleDeleteProfile()}
+              disabled={deletingProfile}
+              className={`w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium transition-colors mt-2 ${
+                deletingProfile
+                  ? 'bg-red-100 text-red-300 cursor-not-allowed'
+                  : 'bg-red-50 hover:bg-red-100 text-red-600 border border-red-200'
+              }`}
+            >
+              <Trash2 size={14} />
+              {deletingProfile
+                ? t('جاري الحذف...', 'Deleting...', lang)
+                : t('حذف الملف التعريفي', 'Delete Profile', lang)}
+            </button>
           </div>
         ) : null}
       </Modal>
