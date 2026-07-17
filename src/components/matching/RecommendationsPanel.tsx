@@ -29,8 +29,8 @@ export function RecommendationsPanel({ open, onClose, workspaceId, courses, onAs
     setResult(null);
     try {
       const data = await api.matching.recommend(workspaceId, {
-        course_name: selectedCourse.name,
-        course_desc: selectedCourse.specialization || selectedCourse.name,
+        courseName: selectedCourse.name,
+        courseDesc: selectedCourse.specialization || selectedCourse.name,
         attendees: selectedCourse.expectedTrainees || 15,
       });
       setResult(data);
@@ -47,7 +47,7 @@ export function RecommendationsPanel({ open, onClose, workspaceId, courses, onAs
     try {
       await api.assignments.create(workspaceId, { trainerId: trainer.trainerId, courseId: selectedCourse.id });
       await api.matching.assignTrainer(workspaceId, result.planId, {
-        trainer_id: trainer.trainerId,
+        trainerId: trainer.trainerId,
         score: trainer.score,
         reasons: trainer.reasons,
       });

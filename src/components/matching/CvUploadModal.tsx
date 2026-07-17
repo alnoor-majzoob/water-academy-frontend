@@ -61,10 +61,10 @@ export function CvUploadModal({ open, onClose, workspaceId, defaultTrainerId }: 
     setSaving(true);
     try {
       await api.matching.saveTrainer(workspaceId, {
-        trainer_id: defaultTrainerId,
+        trainerId: defaultTrainerId,
         profile: result.profile,
-        cv_text: result.cvText,
-        cv_filename: result.cvFilename,
+        cvText: result.cvText,
+        cvFilename: result.cvFilename,
       });
       addToast('success', lang === 'ar' ? 'تم حفظ المدرب' : 'Trainer saved');
       setResult(null);
@@ -106,20 +106,7 @@ export function CvUploadModal({ open, onClose, workspaceId, defaultTrainerId }: 
             accept=".pdf,.docx,.doc,.txt"
             onChange={(e) => setFile(e.target.files?.[0] || null)}
             className={inputCls}
-            disabled={analyzing || result}
-          />
-        </div>
-
-        <div>
-          <label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-            AI Provider {lang === 'ar' ? '(اختياري)' : '(optional)'}
-          </label>
-          <input
-            value={provider}
-            onChange={(e) => setProvider(e.target.value)}
-            className={inputCls}
-            placeholder="groq / ollama / local"
-            disabled={analyzing || result}
+            disabled={analyzing || !!result}
           />
         </div>
 

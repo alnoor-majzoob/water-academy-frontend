@@ -112,7 +112,7 @@ export function Trainers() {
   const openCreate = () => {
     setSelected(null);
     setErrors({});
-    setForm({ id: 0, externalId: '', name: '', nameEn: '', specialties: [], city: '', trainerType: 'Internal', unavailableDates: [], maxDaysPerMonth: 20, maxConsecutiveDays: 5, costPerDay: 1500, notes: '' });
+    setForm({ id: 0, externalId: '', name: '', nameEn: '', specialties: [], city: '', trainerType: 'Internal', unavailableDates: [], maxDaysPerMonth: 20, maxConsecutiveDays: 5, costPerDay: 1500, notes: '', cvAnalyzed: false });
     setShowDrawer(true);
   };
 

@@ -201,7 +201,7 @@ export interface MatchingRecommendationResult {
   planId: number;
   recommendedTrainers: MatchingRecommendedTrainer[];
   proposal: { trainerId: number | null };
-  matching: { enabled: boolean; used: boolean; provider: string; model: string; durationMs: number };
+  matching: { enabled: boolean; used: boolean; provider?: string; model?: string; durationMs?: number; error?: string };
 }
 
 export interface MatchingProfileResult {
@@ -229,8 +229,19 @@ export interface MatchingPlanDto {
   courseName: string;
   courseDesc: string;
   attendees: number;
+  proposedTrainerId: number | null;
   assignedTrainerId: number | null;
+  matchScore: number | null;
+  matchReasons: string[];
+  status: string;
+  trainerName: string | null;
+  trainerNumber: string | null;
   createdAt: string;
+}
+
+export interface MatchingCoursePlanResponse {
+  ok: boolean;
+  plan: MatchingPlanDto;
 }
 
 export interface ImportResultDto {
@@ -556,7 +567,7 @@ export const api = {
     saveTrainer: (workspaceId: number, body: Record<string, unknown>) =>
       mutate<Record<string, unknown>>(`/api/workspaces/${workspaceId}/matching/trainers`, { method: 'POST', body: JSON.stringify(body) }),
     listTrainers: (workspaceId: number) =>
-      request<Record<string, unknown>>(`/api/workspaces/${workspaceId}/matching/trainers`),
+      request<{ trainers: MatchingTrainer[] }>(`/api/workspaces/${workspaceId}/matching/trainers`),
     getTrainerByTrainerId: (workspaceId: number, trainerId: string) =>
       request<MatchingTrainerDetail>(`/api/workspaces/${workspaceId}/matching/trainers/by-trainer-id/${trainerId}`),
     deleteTrainer: (workspaceId: number, id: number) =>
@@ -564,9 +575,9 @@ export const api = {
     recommend: (workspaceId: number, body: Record<string, unknown>) =>
       mutate<MatchingRecommendationResult>(`/api/workspaces/${workspaceId}/matching/recommendations`, { method: 'POST', body: JSON.stringify(body) }),
     assignTrainer: (workspaceId: number, planId: number, body: Record<string, unknown>) =>
-      mutate<Record<string, unknown>>(`/api/workspaces/${workspaceId}/matching/course-plans/${planId}/assign`, { method: 'POST', body: JSON.stringify(body) }),
+      mutate<MatchingCoursePlanResponse>(`/api/workspaces/${workspaceId}/matching/course-plans/${planId}/assign`, { method: 'POST', body: JSON.stringify(body) }),
     listPlans: (workspaceId: number) =>
-      request<Record<string, unknown>>(`/api/workspaces/${workspaceId}/matching/course-plans`),
+      request<{ plans: MatchingPlanDto[] }>(`/api/workspaces/${workspaceId}/matching/course-plans`),
   },
 };
 
