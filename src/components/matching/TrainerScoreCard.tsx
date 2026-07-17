@@ -46,14 +46,6 @@ export function TrainerScoreCard({ trainer, onAssign, assigning }: TrainerScoreC
         </div>
       </div>
 
-      {trainer.aiScore !== null && (
-        <div className={`flex gap-4 mt-2 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-          <span>{lang === 'ar' ? 'محلي' : 'Local'}: {trainer.localScore}</span>
-          <span>AI: {trainer.aiScore}</span>
-          <span className="capitalize">{trainer.matchMethod === 'hybrid_ai' ? (lang === 'ar' ? 'ذكاء اصطناعي' : 'Hybrid AI') : trainer.matchMethod}</span>
-        </div>
-      )}
-
       {trainer.topics.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2">
           {trainer.topics.slice(0, 4).map((topic, i) => (
