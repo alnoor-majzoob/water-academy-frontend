@@ -32,6 +32,7 @@ export function RecommendationsPanel({ open, onClose, workspaceId, courses, onAs
         courseName: selectedCourse.name,
         courseDesc: selectedCourse.specialization || selectedCourse.name,
         attendees: selectedCourse.expectedTrainees || 15,
+        lang,
       });
       setResult(data);
     } catch (error) {

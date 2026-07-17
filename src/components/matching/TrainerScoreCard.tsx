@@ -35,7 +35,9 @@ export function TrainerScoreCard({ trainer, onAssign, assigning }: TrainerScoreC
         <div className="flex items-center gap-2 shrink-0">
           {trainer.fitLevel && (
             <span className={`${fitColor} text-white text-[10px] font-semibold px-2 py-0.5 rounded-full`}>
-              {trainer.fitLevel}
+              {lang === 'ar'
+                ? { high: 'عالي', medium: 'متوسط', low: 'منخفض' }[trainer.fitLevel] || trainer.fitLevel
+                : trainer.fitLevel}
             </span>
           )}
           <span className={`text-lg font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>
@@ -48,7 +50,7 @@ export function TrainerScoreCard({ trainer, onAssign, assigning }: TrainerScoreC
         <div className={`flex gap-4 mt-2 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
           <span>{lang === 'ar' ? 'محلي' : 'Local'}: {trainer.localScore}</span>
           <span>AI: {trainer.aiScore}</span>
-          <span className="capitalize">{trainer.matchMethod === 'hybrid_ai' ? 'Hybrid AI' : trainer.matchMethod}</span>
+          <span className="capitalize">{trainer.matchMethod === 'hybrid_ai' ? (lang === 'ar' ? 'ذكاء اصطناعي' : 'Hybrid AI') : trainer.matchMethod}</span>
         </div>
       )}
 
