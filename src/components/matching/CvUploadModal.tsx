@@ -112,9 +112,9 @@ export function CvUploadModal({ open, onClose, workspaceId, defaultTrainerId }: 
 
         <button
           onClick={handleAnalyze}
-          disabled={!file || analyzing}
+          disabled={!file || analyzing || !!result}
           className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-            !file || analyzing
+            !file || analyzing || !!result
               ? 'bg-blue-400 cursor-not-allowed text-white'
               : 'bg-blue-600 hover:bg-blue-700 text-white'
           }`}

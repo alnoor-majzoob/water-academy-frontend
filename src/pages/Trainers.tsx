@@ -269,11 +269,7 @@ export function Trainers() {
                   <Eye size={12} />
                 </button>
                 )}
-                <button onClick={() => setCvUploadTrainerId(String(trainer.id))} disabled={trainer.cvAnalyzed} className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
-                  trainer.cvAnalyzed
-                    ? (isDark ? 'border-slate-700 text-slate-600 cursor-not-allowed' : 'border-slate-100 text-slate-300 cursor-not-allowed')
-                    : (isDark ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50')
-                }`} title={t('رفع سيرة ذاتية', 'Upload CV', lang)}>
+                <button onClick={() => setCvUploadTrainerId(String(trainer.id))} className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${isDark ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`} title={t('رفع سيرة ذاتية', 'Upload CV', lang)}>
                   <Upload size={12} />
                 </button>
                 <button onClick={() => void handleDelete(trainer.id)} className="px-3 py-1.5 text-xs font-medium rounded-lg text-red-500 hover:bg-red-50 border border-red-200">
