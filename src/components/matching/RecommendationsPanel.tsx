@@ -96,6 +96,11 @@ export function RecommendationsPanel({ open, onClose, workspaceId, courses, onAs
 
         {result && (
           <div className="space-y-3 max-h-96 overflow-y-auto">
+            {result.matching.durationMs != null && (
+              <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                {lang === 'ar' ? 'زمن الاستجابة' : 'Response time'}: {result.matching.durationMs}ms
+              </p>
+            )}
             {result.recommendedTrainers.length === 0 ? (
               <p className={`text-sm text-center py-8 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 {lang === 'ar' ? 'لم يتم العثور على مدربين' : 'No trainers found'}
