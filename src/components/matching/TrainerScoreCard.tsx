@@ -12,8 +12,12 @@ export function TrainerScoreCard({ trainer, onAssign, assigning }: TrainerScoreC
   const { lang, theme } = useApp();
   const isDark = theme === 'dark';
 
-  const fitColor = trainer.fitLevel === 'high' ? 'bg-green-500'
-    : trainer.fitLevel === 'medium' ? 'bg-amber-500'
+  const fitLevel = trainer.score >= 66.6 ? 'high'
+    : trainer.score > 33.3 ? 'medium'
+    : 'low';
+
+  const fitColor = fitLevel === 'high' ? 'bg-green-500'
+    : fitLevel === 'medium' ? 'bg-amber-500'
     : 'bg-slate-500';
 
   return (
@@ -33,13 +37,11 @@ export function TrainerScoreCard({ trainer, onAssign, assigning }: TrainerScoreC
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {trainer.fitLevel && (
-            <span className={`${fitColor} text-white text-[10px] font-semibold px-2 py-0.5 rounded-full`}>
-              {lang === 'ar'
-                ? { high: 'عالي', medium: 'متوسط', low: 'منخفض' }[trainer.fitLevel] || trainer.fitLevel
-                : trainer.fitLevel}
-            </span>
-          )}
+          <span className={`${fitColor} text-white text-[10px] font-semibold px-2 py-0.5 rounded-full`}>
+            {lang === 'ar'
+              ? { high: 'عالي', medium: 'متوسط', low: 'منخفض' }[fitLevel]
+              : fitLevel}
+          </span>
           <span className={`text-lg font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>
             {trainer.score}
           </span>
