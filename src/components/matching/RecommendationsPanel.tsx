@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useApp } from '../../context/AppContext';
+import { useApp, type Lang } from '../../context/AppContext';
 import { Modal } from '../ui/Modal';
 import { TrainerScoreCard } from './TrainerScoreCard';
 import { api, type MatchingRecommendationResult, type MatchingRecommendedTrainer, type CourseDto } from '../../lib/api';
@@ -13,12 +13,21 @@ interface RecommendationsPanelProps {
   onAssigned: () => void;
 }
 
-const formatDuration = (ms: number, locale: string) => {
-  if (ms >= 1000) {
-    const s = ms / 1000;
-    return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 2, minimumFractionDigits: 2 }).format(s)}s`;
-  }
-  return `${new Intl.NumberFormat(locale).format(ms)}ms`;
+const units = (lang: Lang) => ({
+  ms: lang === 'ar' ? 'مللي ثانية' : 'ms',
+  s:  lang === 'ar' ? 'ثانية' : 's',
+  m:  lang === 'ar' ? 'دقيقة' : 'min',
+  h:  lang === 'ar' ? 'ساعة' : 'h',
+});
+
+const formatDuration = (ms: number, locale: string, lang: Lang) => {
+  const nf = (opts?: Intl.NumberFormatOptions) => new Intl.NumberFormat(locale, opts);
+  const u = units(lang);
+
+  if (ms >= 3600000) return `${nf({ maximumFractionDigits: 2, minimumFractionDigits: 2 }).format(ms / 3600000)} ${u.h}`;
+  if (ms >= 60000)   return `${nf({ maximumFractionDigits: 1, minimumFractionDigits: 1 }).format(ms / 60000)} ${u.m}`;
+  if (ms >= 1000)    return `${nf({ maximumFractionDigits: 2, minimumFractionDigits: 2 }).format(ms / 1000)} ${u.s}`;
+  return `${nf().format(Math.round(ms))} ${u.ms}`;
 };
 
 export function RecommendationsPanel({ open, onClose, workspaceId, courses, onAssigned }: RecommendationsPanelProps) {
@@ -106,7 +115,7 @@ export function RecommendationsPanel({ open, onClose, workspaceId, courses, onAs
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {result.matching.durationMs != null && (
               <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                {lang === 'ar' ? 'زمن الاستجابة' : 'Response time'}: {formatDuration(result.matching.durationMs, lang === 'ar' ? 'ar-SA' : 'en-US')}
+                {lang === 'ar' ? 'زمن الاستجابة' : 'Response time'}: {formatDuration(result.matching.durationMs, lang === 'ar' ? 'ar-SA' : 'en-US', lang)}
               </p>
             )}
             {result.recommendedTrainers.length === 0 ? (
