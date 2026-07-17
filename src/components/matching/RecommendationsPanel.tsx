@@ -64,13 +64,13 @@ export function RecommendationsPanel({ open, onClose, workspaceId, courses, onAs
   const inputCls = `w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-800'}`;
 
   return (
-    <Modal open={open} onClose={onClose} maxWidth="max-w-lg" title={lang === 'ar' ? 'مطابقة AI' : 'AI Match'}>
+    <Modal open={open} onClose={() => { setCourseId(0); setResult(null); setLoading(false); setAssigningId(null); onClose(); }} maxWidth="max-w-lg" title={lang === 'ar' ? 'مطابقة AI' : 'AI Match'}>
       <div className="space-y-4">
         <div>
           <label className={`block text-xs font-medium mb-1.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
             {lang === 'ar' ? 'اختر الدورة' : 'Select Course'}
           </label>
-          <select value={courseId || ''} onChange={(e) => setCourseId(Number(e.target.value))} className={inputCls}>
+          <select value={courseId || ''} onChange={(e) => setCourseId(Number(e.target.value))} disabled={!!result || loading} className={inputCls}>
             <option value="">{lang === 'ar' ? '-- اختر --' : '-- Select --'}</option>
             {courses.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
